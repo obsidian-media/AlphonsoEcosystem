@@ -32,14 +32,8 @@ src/                   React frontend (250 .tsx, 73 .jsx — mostly tests and ol
     contentFactory/    Miya's content factory: projects, brands, steps, media, posts, results, characters, motion
   hooks/               21 custom hooks (useAppShellState, useAppEffects split into 9 concerns)
   lib/                 Utilities (ollama.ts, chatUtils.js, appStorage.ts, randomId.ts, readableValue.ts)
-  test/                671 test files, 6,933 tests (Vitest; see ground truth for current verification status)
-ios/                   iOS companion app (SwiftUI)
-  AlphonsoCompanion/
-    AlphonsoCompanionApp.swift    — @main entry point
-    ContentView.swift             — tab view container
-    Views/                        — PairingView, ChatView, AgentDockView, BoardroomView, SettingsView
-    Services/                     — WebSocketService.swift, MDNSService.swift
-    Models/                       — ConnectionState.swift
+  test/                672 test files, 6,933 tests (Vitest; see ground truth for current verification status)
+mobile/                The phone app (Capacitor: iOS and Android); the old Swift app is archived
   src-tauri/             Rust backend
   src/lib.rs           ~973 lines, 227 Tauri commands (across 54 modules)
   src/utils.rs         Shared utilities
@@ -85,7 +79,7 @@ docs/                  195 documentation .md files (209 markdown docs total incl
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 6,933 tests (671 files)
+npm run test             # 6,933 tests (672 files)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command

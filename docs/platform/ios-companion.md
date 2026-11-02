@@ -1,3 +1,5 @@
+> **Retired (2026-11-02):** the Swift companion and the desktop's local-network server it used are archived in `archive/MIGHTBEUSEDLATER/` (phone app phase 3 part C). The phone app is in `mobile/` and pairs through the relay; see `docs/PHONE.md`. This page is history.
+
 # iOS Companion — Implementation Details
 
 > **Status (2026-10-25):** built; pairing confirmed on a real device on 2026-07-25 (PR #121). The desktop listener is off until you enable mobile pairing (2026-09-30), and phone commands go through Jose (2026-10-23, PR #341). Cloud Voice: compute on AWS, Farsi voice on Railway; the AWS address did not resolve on 2026-10-20.
