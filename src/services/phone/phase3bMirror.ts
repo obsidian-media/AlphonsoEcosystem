@@ -17,7 +17,7 @@ import { listSkills, refusedSkills } from '../skills/skillLibrary';
 import { skillStats, statsLine } from '../skills/skillOutcomes';
 import { listConnectors } from '../connectors/connectorRegistry';
 import { isConnectorAuthenticated } from '../connectors/connectorAuth';
-import { deriveConnectorStatus } from '../connectorStatusService';
+import { CONNECTOR_STATUS_LABELS, deriveConnectorStatus } from '../connectorStatusService';
 import { readAppSettings } from '../settingsWriter';
 
 export interface ProviderChoice { provider: AgentModelProvider; label: string; paid: boolean; models: string[] }
@@ -38,7 +38,7 @@ export interface PhoneSettings {
 }
 export interface PhoneTeam { id: string; name: string; steps: Array<{ stepId: string; agent: string; actionType: string; needs: string[] }>; problems: string[] }
 export interface PhoneSkills { skills: Array<{ agent: string; name: string; useWhen: string; builtIn: boolean; stats: string }>; refused: Array<{ file: string; reason: string }> }
-export interface PhoneConnector { id: string; name: string; status: string; enabled: boolean; needsKeys: boolean; lastCheck: { atMs: number; ok: boolean } | null }
+export interface PhoneConnector { id: string; name: string; status: string; statusLabel: string; enabled: boolean; needsKeys: boolean; lastCheck: { atMs: number; ok: boolean } | null }
 
 let cachedChoices: ProviderChoice[] = [];
 
@@ -123,6 +123,7 @@ export function connectorsMirrorData(): PhoneConnector[] {
       id: String(c.id),
       name: String(c.name || c.id),
       status,
+      statusLabel: CONNECTOR_STATUS_LABELS[status],
       enabled: isConnectorAuthenticated(String(c.id)).enabled,
       needsKeys: required.length > 0 && status !== 'live',
       lastCheck: typeof c.lastTestAtMs === 'number' && c.lastTestAtMs > 0 ? { atMs: c.lastTestAtMs, ok: c.lastTestStatus === 'verified' } : null,

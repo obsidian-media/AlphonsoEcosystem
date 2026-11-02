@@ -180,8 +180,8 @@ describe('Boardroom on the phone', () => {
 });
 
 describe('More', () => {
-  it('opens Memory, Projects and Boardroom; the rest stays on the computer for now', () => {
-    expect(ON_COMPUTER_FOR_NOW).toEqual(['Teams', 'Skills', 'Settings and connectors']);
+  it('opens Memory, Projects and Boardroom', () => {
+    expect(ON_COMPUTER_FOR_NOW).toEqual([]);
     render(<MoreScreen more={more()} lock={lock()} onOpenRequest={vi.fn()} lockEnabled onLockChange={vi.fn()} onSignOut={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Boardroom' }));
     expect(screen.getAllByTestId(/^boardroom-thread-/)).toHaveLength(2);

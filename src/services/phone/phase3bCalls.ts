@@ -11,6 +11,7 @@ import { listConnectors } from '../connectors/connectorRegistry';
 import { AGENT_NAMES } from '../jose/agentNames';
 import { cachedModelChoices, settingsMirrorData, type PhoneSettings } from './phase3bMirror';
 import { STALE } from './phase3Calls';
+import { asksLess } from './asksLess';
 
 export type Phase3bCallName = 'settings.set' | 'agent.setModel' | 'team.run' | 'connector.setEnabled';
 
@@ -30,22 +31,18 @@ const bool = (v: unknown): boolean => { if (typeof v !== 'boolean') throw new Er
 interface Setting {
   read: (s: PhoneSettings) => unknown;
   check: (value: unknown) => unknown;
-  /** True when going from `from` to `to` makes Alphonso ask less or allows more spending. */
-  asksLess?: (from: any, to: any) => boolean;
   patch: (value: any) => Record<string, unknown>;
 }
 
 function setting(path: string): Setting {
-  if (path === 'approvalMode') return { read: (s) => s.approvalMode, check: bool, asksLess: (f, t) => f && !t, patch: (v) => ({ approvalMode: v }) };
-  if (path === 'zeroCostMode') return { read: (s) => s.zeroCostMode, check: bool, asksLess: (f, t) => f && !t, patch: (v) => ({ zeroCostMode: v }) };
+  if (path === 'approvalMode') return { read: (s) => s.approvalMode, check: bool, patch: (v) => ({ approvalMode: v }) };
+  if (path === 'zeroCostMode') return { read: (s) => s.zeroCostMode, check: bool, patch: (v) => ({ zeroCostMode: v }) };
   if (path === 'showModelThinking') return { read: (s) => s.showModelThinking, check: bool, patch: (v) => ({ showModelThinking: v }) };
-  if (path === 'paidModels.allowed') return { read: (s) => s.paidModels.allowed, check: bool, asksLess: (f, t) => !f && t, patch: (v) => ({ paidModels: { allowed: v } }) };
+  if (path === 'paidModels.allowed') return { read: (s) => s.paidModels.allowed, check: bool, patch: (v) => ({ paidModels: { allowed: v } }) };
   if (path === 'paidModels.monthlyCapUsd') {
     return {
       read: (s) => s.paidModels.monthlyCapUsd,
       check: (v) => { if (v === null || (typeof v === 'number' && Number.isFinite(v) && v >= 0)) return v; throw new Error(BAD_VALUE); },
-      // No cap (null) is the most; any raise allows more spending.
-      asksLess: (f, t) => (t === null ? f !== null : f !== null && t > f),
       patch: (v) => ({ paidModels: { monthlyCapUsd: v } }),
     };
   }
@@ -61,7 +58,6 @@ function setting(path: string): Setting {
     return {
       read: (s) => s.effectApprovals[effect],
       check: (v) => { const on = bool(v); if (!on && LOCKED_EFFECTS.includes(effect)) throw new Error(ALWAYS_ASKS); return on; },
-      asksLess: (f, t) => f && !t,
       patch: (v) => ({ effectApprovals: { [effect]: v } }),
     };
   }
@@ -87,7 +83,7 @@ export const PHASE3B_CALLS: Record<Phase3bCallName, Call> = {
     const value = def.check(args.value);
     const current = def.read(settingsMirrorData());
     if (!same(current, args.base)) throw new Error(STALE);
-    if (def.asksLess?.(current, value) && args.confirmed !== true) throw new Error(NEEDS_CONFIRM);
+    if (asksLess(str(args.setting), current, value) && args.confirmed !== true) throw new Error(NEEDS_CONFIRM);
     applySettingsPatch(def.patch(value));
     return { ok: true, latest: settingsMirrorData() };
   },

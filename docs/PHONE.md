@@ -74,6 +74,20 @@ A code from another app is refused, and the app says where to find the right one
   confirmation stays hidden until you tap **Reveal** and confirm with Face ID or your
   fingerprint. Boardroom only notifies you when a thread needs your decision; you can
   **Acknowledge** it here.
+- **More → Teams:** your saved teams with their steps. Type what the team should do and
+  tap **Run**; the run shows on the Requests board. Building or changing a team is done on
+  the computer (System → Teams).
+- **More → Skills:** each agent's skills, what they're for and how they've done, and any skill
+  file your computer didn't use, with why. Writing skills is done on the computer.
+- **More → Settings:** the same switches as Settings → Approvals on the computer (Approval
+  Mode, what asks first, Allow paid models and its monthly limit, how long waiting requests
+  last), Zero-Cost Mode, which model each agent uses, and which notifications this phone gets.
+  Anything that makes Alphonso ask less or spend more (turning Approval Mode, an "ask before"
+  switch or Zero-Cost Mode off, allowing paid models, raising the limit, giving an agent a paid
+  model) asks for Face ID or your fingerprint first. Spending, sending and deleting always ask.
+  Keys, passwords and prices are only set on the computer.
+- **More → Connectors:** each connector's status and last check, with its on/off switch. One
+  that needs a key says **Set up on your computer**.
 - **Notifications:** when a step or plan waits for you, a request finishes or fails, or a
   review needs you. The text is opened only on your phone; Apple, Google and the relay see
   only "New activity".

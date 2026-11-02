@@ -29,6 +29,11 @@ export type ConnectorStatusKind = 'live' | 'missing_config' | 'foundation_only' 
  *                       (chatgpt/claude with zero credentials configured)
  *   'disabled'        — everything else (not_configured, unknown, etc.)
  */
+/** A status in plain words (the phone's Connectors, phone phase 3 part B). */
+export const CONNECTOR_STATUS_LABELS: Record<ConnectorStatusKind, string> = {
+  live: 'Working', missing_config: 'Needs setting up', foundation_only: 'Ready to use', placeholder: 'Not set up', disabled: 'Not set up',
+};
+
 export function deriveConnectorStatus(connector: StatusConnector | null | undefined): ConnectorStatusKind {
   if (!connector) return 'disabled';
   const status = String(connector.status || '').toLowerCase();

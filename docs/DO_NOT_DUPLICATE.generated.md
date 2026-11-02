@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 384 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 385 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -278,7 +278,7 @@ Source-backed inventory: 384 services and 185 components. Human purpose descript
 | service | `src/services/connectors/slackConnector.ts` | `addReaction`, `createChannel`, `deleteMessage`, `getChannelHistory`, `inviteToChannel`, `listChannels`, `sendMessage`, `sendRichMessage`, `sendWebhookMessage`, `SLACK_APP_TOKEN_PROBLEM`, `SlackChannel`, `SlackConfig`, `SlackMessage`, `slackTokenProblem`, `updateMessage`, `uploadFile` |
 | service | `src/services/connectors/stockFootageConnector.ts` | `configuredStockSources`, `searchStockClips`, `StockClip`, `StockSource` |
 | service | `src/services/connectors/tavilyConnector.ts` | `isTavilyConfigured`, `searchTavily`, `TavilySearchOptions`, `TavilySearchResult`, `TavilySource` |
-| service | `src/services/connectorStatusService.ts` | `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
+| service | `src/services/connectorStatusService.ts` | `CONNECTOR_STATUS_LABELS`, `ConnectorStatusKind`, `deriveConnectorStatus`, `StatusConnector` |
 | service | `src/services/contentFactory/adCopyExport.ts` | `AD_NETWORKS`, `AdCopy`, `adCsv`, `AdNetwork`, `adsForNetwork`, `writeAdCsv` |
 | service | `src/services/contentFactory/brandResults.ts` | `Band`, `BANDS`, `brandMedian`, `BrandResultRow`, `brandResultRows`, `FIRST_POSTS`, `MAIN_METRIC`, `MIN_POSTS_TO_COMPARE`, `permissionBanners`, `postBand` |
 | service | `src/services/contentFactory/calendarItems.ts` | `BRAND_COLORS`, `brandMarker`, `filterCalendarItems`, `hoursWithItems`, `itemsForMonth`, `itemsForWeek`, `listCalendarItems`, `moveCalendarItem` |
@@ -467,6 +467,7 @@ Source-backed inventory: 384 services and 185 components. Human purpose descript
 | service | `src/services/orchestrationReceiptService.ts` | `appendOrchestrationReceipt`, `AppendReceiptInput`, `listOrchestrationReceipts`, `ORCHESTRATION_RECEIPT_SCOPE`, `OrchestrationReceipt`, `ReceiptFilters` |
 | service | `src/services/packetExecutionService.ts` | `executeApprovedPacket` |
 | service | `src/services/parallelExecutionService.ts` | `createTaskQueue`, `executeBatch`, `executeParallel`, `executeWithRetry`, `ParallelExecutionOptions`, `ParallelResult`, `ParallelTask` |
+| service | `src/services/phone/asksLess.ts` | `asksLess` |
 | service | `src/services/phone/boardData.ts` | `BoardData`, `BoardDataProvider`, `localBoardData`, `runResultText`, `sendTextAnswer`, `useBoardData` |
 | service | `src/services/phone/contentCalls.ts` | `CHANGED_ON_COMPUTER`, `CONTENT_CALLS`, `ContentAnswer`, `mediaPreview`, `NOT_OFFERED`, `POST_GONE`, `postsStamp`, `postStamp`, `previewLimitLine`, `PreviewPiece`, `PROJECT_GONE`, `resetContentCallsForTests`, `stepStamp` |
 | service | `src/services/phone/contentMirror.ts` | `CONTENT_PROJECTS`, `contentMirrorData`, `mediaOffered`, `MediaRef`, `PhoneProject`, `projectMedia`, `versionMedia` |
