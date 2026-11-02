@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import type { PhoneSignIn, SignInMethod } from '../../services/phone/phoneAccount';
 
-export function SignInScreen({ signIn, onSignedIn }: { signIn: PhoneSignIn; onSignedIn: () => void }) {
+/** `onDemo` (phase 3 part C): "Try a demo" with sample data, for anyone before pairing. */
+export function SignInScreen({ signIn, onSignedIn, onDemo }: { signIn: PhoneSignIn; onSignedIn: () => void; onDemo?: () => void }) {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const go = async (method: SignInMethod) => {
@@ -17,6 +18,7 @@ export function SignInScreen({ signIn, onSignedIn }: { signIn: PhoneSignIn; onSi
       <input aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="rounded-lg border border-(--border) px-3 py-3" />
       <button type="button" disabled={!email.includes('@')} onClick={() => go('email')} className="rounded-lg bg-(--surface-3) py-3">Email me a link</button>
       {message && <p role="status" className="text-(--danger)">{message}</p>}
+      {onDemo && <button type="button" onClick={onDemo} className="mt-4 text-(--accent)">Try a demo</button>}
     </div>
   );
 }

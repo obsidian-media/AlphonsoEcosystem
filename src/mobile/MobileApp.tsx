@@ -18,6 +18,7 @@ import { CalendarScreen } from './screens/Calendar';
 import type { PhonePreviewParts } from '../services/phone/remoteData';
 import { OfflineBanner } from './screens/Offline';
 import { withLockedConfirm } from './lockedApproval';
+import { createDemoLink, demoDataOptions, DEMO_BANNER } from './demo/demoLink';
 
 export const PHONE_LOCK_KEY = 'alphonso_phone_lock_v1';
 /** Face ID / fingerprint, given by the packaging. `strict`: a phone with no passcode can't
@@ -48,10 +49,18 @@ export interface MobileAppProps {
 
 export function lockOn(): boolean { return localStorage.getItem(PHONE_LOCK_KEY) !== 'off'; }
 
-function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotificationAction, previews }: { link: PhoneLink; lock: PhoneLock; lockEnabled: boolean; onLockChange: (on: boolean) => void; onSignOut: () => void; onNotificationAction?: OnNotificationAction; previews?: PhonePreviewParts }) {
-  const data = useMemo(() => createRemoteData(link, previews), [link, previews]);
+/** The demo never asks for Face ID: every action is refused anyway. */
+const DEMO_LOCK: PhoneLock = { confirm: async () => true };
+
+function LinkedApp({ link, lock: realLock, lockEnabled, onLockChange, onSignOut, onNotificationAction, previews, demo = false }: { link: PhoneLink; lock: PhoneLock; lockEnabled: boolean; onLockChange: (on: boolean) => void; onSignOut: () => void; onNotificationAction?: OnNotificationAction; previews?: PhonePreviewParts; demo?: boolean }) {
+  const data = useMemo(() => {
+    if (!demo) return createRemoteData(link, previews);
+    const { parts, options } = demoDataOptions();
+    return createRemoteData(link, parts, options);
+  }, [link, previews, demo]);
+  const lock = demo ? DEMO_LOCK : realLock;
   // A step that spends, sends or publishes, or deletes asks for Face ID / fingerprint first.
-  const board = useMemo(() => withLockedConfirm(data.board, lock), [data, lock]);
+  const board = useMemo(() => (demo ? data.board : withLockedConfirm(data.board, lock)), [data, lock, demo]);
   const [tab, setTab] = useState<Tab>('chat');
   // A "ready to check" notice names its project as `project:<id>` (phase 2).
   const [studioProject, setStudioProject] = useState<string | undefined>(undefined);
@@ -86,7 +95,14 @@ function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotific
   const computerName = savedPairing()?.computerName || 'your computer';
   return (
     <div className="flex h-full flex-col bg-(--surface-1) text-(--text-1)">
-      <header className="px-4 pb-2 pt-3 text-sm font-semibold">Alphonso · {computerName}</header>
+      {demo ? (
+        <header className="flex items-center justify-between gap-2 bg-(--surface-3) px-4 pb-2 pt-3 text-sm">
+          <span role="status" className="font-semibold">{DEMO_BANNER}</span>
+          <button type="button" onClick={onSignOut} className="text-xs text-(--accent)">Leave demo</button>
+        </header>
+      ) : (
+        <header className="px-4 pb-2 pt-3 text-sm font-semibold">Alphonso · {computerName}</header>
+      )}
       {!online && <OfflineBanner text={offlineLine(since)} />}
       {notice && <p role="status" className="mx-4 mb-2 rounded-lg bg-(--surface-3) px-3 py-2 text-xs">{notice}</p>}
       <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
@@ -97,7 +113,7 @@ function LinkedApp({ link, lock, lockEnabled, onLockChange, onSignOut, onNotific
         {tab === 'more' && (
           <MoreScreen key={boardroomThread || 'more'} more={data.more} lock={lock} openThreadId={boardroomThread}
             onOpenRequest={(requestId) => { setSelected(requestId); setTab('requests'); }}
-            lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} />
+            lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} demo={demo} />
         )}
       </main>
       <nav role="tablist" className="grid grid-cols-5 border-t border-(--border) text-xs">
@@ -118,6 +134,8 @@ export function MobileApp(props: MobileAppProps) {
   const [unlocked, setUnlocked] = useState(!lockOn());
   const [asking, setAsking] = useState(false);
   const [link, setLink] = useState<PhoneLink | null>(null);
+  // "Try a demo" (phase 3 part C): a fresh demo link each time; nothing of it is kept.
+  const [demoLink, setDemoLink] = useState<PhoneLink | null>(null);
 
   const askUnlock = async () => {
     setAsking(true);
@@ -139,7 +157,13 @@ export function MobileApp(props: MobileAppProps) {
       </div>
     );
   }
-  if (!signedIn) return <SignInScreen signIn={props.signIn} onSignedIn={() => setSignedIn(true)} />;
+  if (demoLink) {
+    return (
+      <LinkedApp link={demoLink} lock={props.lock} demo lockEnabled={false} onLockChange={() => undefined}
+        onSignOut={() => { demoLink.stop(); setDemoLink(null); }} />
+    );
+  }
+  if (!signedIn) return <SignInScreen signIn={props.signIn} onSignedIn={() => setSignedIn(true)} onDemo={() => setDemoLink(createDemoLink())} />;
   if (!paired) {
     const pair = props.pair ?? ((qr: string) => pairPhone(qr, { auth: props.signIn, secrets: props.secrets, phoneName: props.phoneName || 'Phone' }));
     return <PairScreen pair={pair} scanQr={props.scanQr} onPaired={() => setPaired(true)} />;

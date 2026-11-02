@@ -32,10 +32,22 @@ export interface MoreScreenProps {
   lockEnabled: boolean;
   onLockChange: (on: boolean) => void;
   onSignOut: () => void;
+  /** The demo (phase 3 part C): the pages need a paired computer, and Sign out becomes Leave demo. */
+  demo?: boolean;
 }
 
-export function MoreScreen({ more, lock, onOpenRequest, openThreadId, lockEnabled, onLockChange, onSignOut }: MoreScreenProps) {
+export const DEMO_PAIR_FIRST = 'Pair your computer to use this.';
+
+export function MoreScreen({ more, lock, onOpenRequest, openThreadId, lockEnabled, onLockChange, onSignOut, demo = false }: MoreScreenProps) {
   const [page, setPage] = useState<Page | null>(openThreadId ? 'boardroom' : null);
+  if (page && demo) {
+    return (
+      <div className="pt-2 text-sm">
+        <button type="button" onClick={() => setPage(null)} className="text-xs text-(--accent)">Back</button>
+        <p className="mt-3 text-(--text-2)">{DEMO_PAIR_FIRST}</p>
+      </div>
+    );
+  }
   if (page) {
     return (
       <div className="pt-2">
@@ -59,11 +71,13 @@ export function MoreScreen({ more, lock, onOpenRequest, openThreadId, lockEnable
           </li>
         ))}
       </ul>
-      <label className="flex items-center gap-2">
-        <input type="checkbox" checked={lockEnabled} onChange={(e) => onLockChange(e.target.checked)} />
-        Ask for Face ID or fingerprint when opening
-      </label>
-      <button type="button" onClick={onSignOut} className="rounded-lg bg-(--surface-3) px-4 py-2">Sign out</button>
+      {!demo && (
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={lockEnabled} onChange={(e) => onLockChange(e.target.checked)} />
+          Ask for Face ID or fingerprint when opening
+        </label>
+      )}
+      <button type="button" onClick={onSignOut} className="rounded-lg bg-(--surface-3) px-4 py-2">{demo ? 'Leave demo' : 'Sign out'}</button>
     </div>
   );
 }

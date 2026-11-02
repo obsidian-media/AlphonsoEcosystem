@@ -27,6 +27,13 @@ will be in the App Store and Google Play later.
 2. **On the phone:** open the app and sign in with the same account: Apple, Google, or your
    email address (the app sends a link; open it on the phone).
 
+## Try a demo
+
+Not paired yet? Tap **Try a demo** on the sign-in screen. You see sample requests, a sample chat and a
+sample Miya Studio project with its calendar, so you can look around. A bar at the top says
+"Demo · sample data, nothing is sent": every action answers "This is a demo: nothing is sent.", nothing
+reaches any computer, and nothing is kept on the phone. Tap **Leave demo** to go back to sign-in.
+
 ## Pair
 
 1. On the computer, in Phones, choose **Pair a phone**. A QR code appears. It works once,
