@@ -92,6 +92,23 @@ export const TASK_TYPE_MEANINGS: Record<string, string> = {
   memory_digest: "this week's decisions by topic, with where each was made",
 };
 
+/** Task types only other features give a step (Boardroom, Miya Studio): their meanings for the
+ *  screens, never offered to Jose's planner (phone phase 3 part C). */
+export const STEP_ONLY_MEANINGS: Record<string, string> = {
+  distribution_slack: 'post a message to Slack',
+  audit_governance: 'review a discussion for risk and what needs approval',
+  creative_brief: 'write a creative brief from a discussion',
+  creative_package_review: "hand Miya's creative package to Jose to route",
+};
+
+/** A step's task in plain words for the board and the plan map: its meaning up to the first ";" or
+ *  "(", else the task type with spaces (phone phase 3 part C). */
+export function taskLabel(actionType: string): string {
+  const meaning = TASK_TYPE_MEANINGS[actionType] || STEP_ONLY_MEANINGS[actionType];
+  if (meaning) return meaning.split(/;| \(/)[0].trim();
+  return String(actionType || '').replace(/_/g, ' ').trim();
+}
+
 /** The task types an agent owns, with their meanings. */
 export function taskTypesFor(agent: string): { type: string; meaning: string }[] {
   return Object.entries(TASK_TYPE_MEANINGS)

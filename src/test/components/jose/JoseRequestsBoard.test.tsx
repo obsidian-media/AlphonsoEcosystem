@@ -151,7 +151,7 @@ describe('JosePlanEditor', () => {
     updateJoseStep(request.id, 'post', { status: 'waiting_approval' });
     setJoseRequestStatus(request.id, 'waiting_approval');
     render(<JoseRequestsBoard selectedRequestId={request.id} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Approve and carry on: Marcus distribution_execution' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Approve and carry on: Marcus · send what an earlier step wrote' }));
     await waitFor(() => expect(approveRequestStep).toHaveBeenCalledWith(request.id, 'post'));
     expect(await screen.findByText('Marcus did it; the request carried on.')).toBeTruthy();
   });
@@ -245,7 +245,7 @@ describe('JosePlanEditor', () => {
     updateJoseStep(request.id, 'post', { status: 'waiting_approval' });
     setJoseRequestStatus(request.id, 'waiting_approval');
     render(<JoseRequestsBoard selectedRequestId={request.id} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Reject: Marcus distribution_execution' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reject: Marcus · send what an earlier step wrote' }));
     expect(rejectRequestStep).toHaveBeenCalledWith(request.id, 'post');
     expect(await screen.findByText('Rejected. The request was cancelled.')).toBeTruthy();
   });

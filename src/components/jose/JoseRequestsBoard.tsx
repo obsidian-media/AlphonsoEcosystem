@@ -20,6 +20,7 @@ import { saveUserTemplate } from '../../services/jose/joseUserTemplates';
 import { QUEUED_LINE, queuePosition } from '../../services/jose/joseQueue';
 import { groupRequests } from '../../services/jose/requestGroups';
 import { agentName } from '../../services/jose/agentNames';
+import { taskLabel } from '../../services/jose/taskTypeMeanings';
 import { pickAlphonsoProject } from '../../services/joseExecutionEngineService';
 import { describeHermesApproval } from '../../services/hermes/hermesConstants';
 import { describeSend } from '../../services/marcus/describeSend';
@@ -338,7 +339,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                   <p data-testid={`jose-code-on-computer-${step.stepId}`} className="w-full text-xs text-(--text-2)">{`${agentName(step.agent)}'s change to your code is checked on your computer: open it there to approve.`}</p>
                 ) : (
                   <Button variant="primary" disabled={running || readOnly} onClick={() => approveStep(step.stepId)}>
-                    {`Approve and carry on: ${agentName(step.agent)} ${step.actionType}`}
+                    {`Approve and carry on: ${agentName(step.agent)} · ${taskLabel(step.actionType)}`}
                   </Button>
                 )}
                 <Button
@@ -346,7 +347,7 @@ export function JoseRequestsBoard({ selectedRequestId }: { selectedRequestId?: s
                   disabled={running || readOnly}
                   onClick={() => show(data.rejectStep(selected.id, step.stepId))}
                 >
-                  {`Reject: ${agentName(step.agent)} ${step.actionType}`}
+                  {`Reject: ${agentName(step.agent)} · ${taskLabel(step.actionType)}`}
                 </Button>
               </React.Fragment>
             ))}

@@ -86,3 +86,13 @@ describe('the Requests board fits a phone', () => {
     expect(list.className).toMatch(/(^|\s)min-w-0(\s|$)/);
   });
 });
+
+describe('steps in plain words', () => {
+  it('the plan map and the buttons say what a step does, not its task type', () => {
+    render(<BoardDataProvider value={phoneData(request([hector, marcus]))}><RequestsScreen /></BoardDataProvider>);
+    expect(screen.getByRole('button', { name: 'Approve and carry on: Marcus · post a message to Slack' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Reject: Marcus · post a message to Slack' })).toBeTruthy();
+    expect(screen.getAllByText(/research a question on the web/).length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toMatch(/distribution_slack|research_report/);
+  });
+});
