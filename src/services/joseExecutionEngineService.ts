@@ -1195,17 +1195,11 @@ export function stepCommandText(assignment: any, commandText: string): string {
   return `${instruction}\n\nThe request: ${commandText}${help}`;
 }
 
-async function executeImageStep(requestText: any, assignment: any) {
-  const base = { resultUrl: null, sources: [], contractAction: assignment?.actionType || 'creative_image' };
-  const image: any = await generateComfyUiImage({ prompt: String(requestText || ''), width: 512, height: 512, steps: 20, cfgScale: 7 }, { endpoint: getComfyUiEndpoint() });
-  const path = Array.isArray(image?.outputPaths) ? image.outputPaths[0] : undefined;
-  if (image?.ok) {
-    return { ...base, summary: 'Miya made the picture.', resultState: 'completed', artifacts: [{ type: 'image', ...(path ? { path } : {}), urls: image.imageUrls || [] }] };
-  }
-  if (image?.pending) {
-    return { ...base, summary: 'The picture is still being made in ComfyUI.', resultState: 'pending_review', artifacts: [{ type: 'image_pending', jobId: image.jobId }] };
-  }
-  return { ...base, summary: `Miya couldn't make the picture: ${String(image?.error || image?.message || 'ComfyUI gave no picture')}`, resultState: 'failed', artifacts: [] };
+// Saved under <output folder>/Miya/<date>/ and shown in Chat, like a video (owner, 2026-11-01:
+// the picture used to stay in ComfyUI's own folder and Chat never said where).
+async function executeImageStep(requestText: any, assignment: any, packet: any) {
+  const { executeChatPicture } = await import('./contentFactory/chatMedia');
+  return executeChatPicture(String(requestText || ''), assignment, packet ? { id: packet.id, commandId: packet.payload?.joseCommandId } : null);
 }
 
 /** A paid or cloud model gets the larger hand-over budget. */
@@ -1272,7 +1266,7 @@ async function executeAssignment(packet: any, assignment: any, requestText: any,
   }
   // A picture asked for in words: Miya makes it with ComfyUI (agent roles Part A).
   if (assignment?.agent === AGENTS.MIYA && assignment?.actionType === 'creative_image') {
-    return executeImageStep(requestText, assignment);
+    return executeImageStep(requestText, assignment, packet);
   }
   // Maria reviews with her own two reviews, the work or the plan (agent phase 3).
   if (assignment?.agent === AGENTS.MARIA) {

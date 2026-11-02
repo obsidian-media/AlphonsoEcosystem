@@ -3,6 +3,7 @@
 // is as fast as before (owner, 2026-10-23). If his model fails, is too slow or
 // answers something unusable, today's word rule decides.
 // Design: docs/superpowers/specs/2026-10-23-jose-orchestration-redesign-design.md §4 step 2
+import { detectCreativeIntent } from '../creativeRoutingService';
 import { generateAgentLlmResponse } from '../../lib/ollama';
 import { isPlainQuestion, shouldRouteThroughJose } from '../../lib/chatUtils';
 import { asksToCleanUpMemory, asksToForget, asksToRemember, parseJoseCommand } from '../joseCommandRouterService';
@@ -60,6 +61,9 @@ export function ruleRoute(text: string): JoseRouteDecision | null {
   if (asksToRemember(value) || asksToForget(value) || asksToCleanUpMemory(value)) return { route: 'plan', source: 'rule', reason: 'A memory request: Echo does that.' };
   if (asksForResearch(value)) return { route: 'plan', source: 'rule', reason: 'Research asked for: Hector searches and cites sources.' };
   if (isPlainQuestion(value)) return { route: 'direct', source: 'rule', reason: 'A plain question.' };
+  // A picture, video or music to make is Miya's work (owner, 2026-11-01: the model once answered
+  // "generate an image of …" in words instead).
+  if (detectCreativeIntent(value)) return { route: 'plan', source: 'rule', reason: 'Something to make: Miya makes it.' };
   // QA batch 0: research, writing, a check, a send or code: two or more of them can't be one reply,
   // whatever the model thinks (a small model answered such a request in Chat).
   if (kindsOfWork(value) >= 2) return { route: 'plan', source: 'rule', reason: 'Several kinds of work.' };

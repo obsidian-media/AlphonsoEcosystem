@@ -28,7 +28,7 @@ export const CHAT_MUSIC_SECONDS = 30;
 const STORE_KEY = 'alphonso_chat_media_v1';
 const KEEP = 100;
 
-export type ChatMediaKind = 'video' | 'music';
+export type ChatMediaKind = 'video' | 'music' | 'picture';
 
 export interface ChatMediaResult {
   id: string;
@@ -129,7 +129,7 @@ function outStem(kind: ChatMediaKind, now = new Date()): string {
   return `${agentName('miya')}/${day}/${kind}-${time}-${randomHex(8)}`;
 }
 
-function stepResult(assignment: { agent: string; actionType: string }, state: 'completed' | 'failed', summary: string, path?: string, data?: unknown) {
+function stepResult(assignment: { agent: string; actionType: string }, state: 'completed' | 'failed' | 'pending_review', summary: string, path?: string, data?: unknown) {
   return {
     summary: `${agentName(assignment.agent)}: ${summary}`,
     resultState: state,
@@ -194,6 +194,33 @@ export async function executeChatMedia(
   saveResult(saved);
   await tellTelegram(packet, root, saved);
   return stepResult(assignment, 'completed', `made the video (${path}).`, path, { kind, prompt });
+}
+
+/** Miya's picture asked for in words (owner, 2026-11-01): made by ComfyUI, then saved under
+ *  `<output folder>/Miya/<date>/` like a video, so Chat shows it and says where it is. Until then it
+ *  stayed in ComfyUI's own output folder and nothing said so. */
+export async function executeChatPicture(
+  prompt: string,
+  assignment: { agent: string; actionType: string },
+  packet: { id?: string; commandId?: string } | null,
+): Promise<ReturnType<typeof stepResult>> {
+  let root: string;
+  try {
+    root = requireOutputRoot(contentAppSettings());
+  } catch (error) {
+    return stepResult(assignment, 'failed', (error as Error).message);
+  }
+  const image = await generateComfyUiImage({ prompt, width: 512, height: 512, steps: 20, cfgScale: 7 }, { endpoint: getComfyUiEndpoint() })
+    .catch((error: Error) => ({ ok: false, error: error.message })) as { ok?: boolean; pending?: boolean; jobId?: string; previewBase64?: string; error?: string; message?: string };
+  if (image?.pending) return stepResult(assignment, 'pending_review', 'the picture is still being made in ComfyUI.', undefined, { kind: 'picture', prompt, jobId: image.jobId });
+  if (!image?.ok || !image.previewBase64) return stepResult(assignment, 'failed', `couldn't make the picture: ${image?.error || image?.message || 'ComfyUI gave no picture'}`);
+  const path = `${outStem('picture')}.png`;
+  const folder = `${root.replace(/[\\/]+$/, '')}/${path.slice(0, path.lastIndexOf('/'))}`;
+  await invoke('save_image_to_folder', { base64Data: image.previewBase64, filename: path.slice(path.lastIndexOf('/') + 1), folder });
+  const saved: ChatMediaResult = { id: `media-${Date.now()}-${randomHex(4)}`, kind: 'picture', prompt, atMs: Date.now(), path, status: 'done', ...(packet?.commandId ? { commandId: packet.commandId } : {}) };
+  saveResult(saved);
+  await tellTelegram(packet, root, saved);
+  return stepResult(assignment, 'completed', `made the picture (${path}).`, path, { kind: 'picture', prompt });
 }
 
 /** Quick package's Check again: one look at a clip still in ComfyUI; never a new run. */

@@ -129,6 +129,11 @@ vi.mock('../../../services/contentFactory/contentAgentExecutor', () => ({
   })),
 }));
 
+vi.mock('../../../services/contentFactory/chatMedia', async (importOriginal) => ({
+  ...(await importOriginal()),
+  executeChatPicture: vi.fn(async () => ({ summary: 'Miya: made the picture (Miya/2026-11-01/picture-120000-aaaaaaaa.png).', resultState: 'completed', artifacts: [{ type: 'chat_media', path: 'Miya/2026-11-01/picture-120000-aaaaaaaa.png' }], sources: [], contractAction: 'creative_image' })),
+}));
+
 vi.mock('../../../services/contentFactory/contentStepRecorder', () => ({
   recordContentStepResult: vi.fn(async () => 'saved'),
   beginContentStep: vi.fn(),
@@ -1243,5 +1248,21 @@ describe('Marcus makes an outside change you approved', () => {
     const marcus = getJoseRequest(`jose-request-${result.commandId}`).steps.find((s) => s.stepId === 'marcus');
     expect(marcus.status).toBe('failed');
     vi.mocked(callTool).mockResolvedValue({ ok: true, text: 'Price updated.' });
+  });
+});
+
+// Owner, 2026-11-01: a picture asked for in Chat is saved in the output folder and Chat says where.
+describe("Miya's picture step", () => {
+  beforeEach(() => { localStorage.clear(); });
+
+  it('makes the picture through the Chat picture path, so it is saved where Chat can show it', async () => {
+    const { executeChatPicture } = await import('../../../services/contentFactory/chatMedia');
+    vi.mocked(executeChatPicture).mockClear();
+    const step = { agent: 'miya', actionType: 'creative_image', stepId: 'picture', title: 'Picture', rationale: 'test', riskLevel: 'low',
+      requiresApproval: false, commandPreview: 'Makes a picture.', fragments: [], effects: ['write_own_work'], needs: [] };
+    const result = await runJoseCommandExecutionPipeline({ commandText: 'generate an image of a sunset over mountains', source: 'test', zeroCostMode: true, previewMode: false, assignments: [step] });
+    expect(executeChatPicture).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(executeChatPicture).mock.calls[0][0]).toBe('generate an image of a sunset over mountains');
+    expect(getStepOutput(result.commandId, 'picture').summary).toBe('Miya: made the picture (Miya/2026-11-01/picture-120000-aaaaaaaa.png).');
   });
 });
