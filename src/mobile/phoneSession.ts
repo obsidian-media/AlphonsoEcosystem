@@ -13,7 +13,7 @@ import { offlineLine, type PhoneTransport } from '../services/phone/remoteData';
 
 export const NOT_ALPHONSO_QR = "That QR code isn't from Alphonso. On your computer, open Settings → Runtime → Remote Access → Phones and scan the code shown there.";
 const PAIRING_KEY = 'alphonso_phone_pairing_v1';
-const PRIVATE_KEY = 'alphonso_phone_private_key';
+const PRIVATE_KEY_SLOT = 'alphonso_phone_private_key';
 /** The paired computer's public key, also in secure storage: the notification extension
  *  (iOS) and the push service (Android) read both keys there to open a notice. */
 export const COMPUTER_KEY_NAME = 'alphonso_phone_computer_key';
@@ -26,7 +26,7 @@ export const RELAY_REFUSED: Record<string, string> = {
 };
 const RELAY_REFUSED_OTHER = "Alphonso's relay couldn't pass that on. Try again.";
 /** The private key's name, shared with the native notification code. */
-export const PRIVATE_KEY_NAME = PRIVATE_KEY;
+export const PRIVATE_KEY_NAME = PRIVATE_KEY_SLOT;
 const CALL_TIMEOUT_MS = 30_000;
 const PROBE_MS = 20_000;
 const BACKOFF_START_MS = 1000;
@@ -68,7 +68,7 @@ export async function deleteAccount(deps: { auth: PhoneAuth; secrets: PhoneSecre
     return { ok: false, reason: body?.error || "Couldn't reach Alphonso's relay. Check the phone's internet connection." };
   }
   for (const key of Object.keys(localStorage)) if (key.startsWith('alphonso_phone')) localStorage.removeItem(key);
-  await deps.secrets.set(PRIVATE_KEY, '');
+  await deps.secrets.set(PRIVATE_KEY_SLOT, '');
   await deps.secrets.set(COMPUTER_KEY_NAME, '');
   return { ok: true };
 }
@@ -88,7 +88,7 @@ export async function pairPhone(qrText: string, deps: { auth: PhoneAuth; secrets
     const body: any = res ? await res.json().catch(() => ({})) : {};
     return { ok: false, reason: body?.error || "Couldn't reach Alphonso's relay. Check the phone's internet connection." };
   }
-  await deps.secrets.set(PRIVATE_KEY, keys.privateKey);
+  await deps.secrets.set(PRIVATE_KEY_SLOT, keys.privateKey);
   await deps.secrets.set(COMPUTER_KEY_NAME, info.computerPublicKey);
   savePairing({ deviceId, phoneName: deps.phoneName, phonePublicKey: keys.publicKey, computerId: info.computerId, computerPublicKey: info.computerPublicKey, computerName: info.computerName, relayUrl: info.relayUrl, pairingSecret: info.pairingSecret });
   return { ok: true };
@@ -123,7 +123,7 @@ export function connectPhone(deps: { socket: SocketFactory; auth: PhoneAuth; sec
 
   const keys = async () => {
     const p = savedPairing();
-    const privateKey = await deps.secrets.get(PRIVATE_KEY);
+    const privateKey = await deps.secrets.get(PRIVATE_KEY_SLOT);
     return p && privateKey ? { pairing: p, privateKey } : null;
   };
 

@@ -20,7 +20,7 @@ export const PHONE_ACCESS_KEY = 'alphonso_phone_access_v1';
 export const PHONES_KEY = 'alphonso_phones_v1';
 const COMPUTER_ID_KEY = 'alphonso_phone_computer_id_v1';
 const PUBLIC_KEY_KEY = 'alphonso_phone_link_public_key_v1';
-const PRIVATE_KEY_SECRET = 'alphonso_phone_link_private_key';
+const PRIVATE_KEY_SLOT = 'alphonso_phone_link_private_key';
 export const PAIRING_WINDOW_MS = 10 * 60_000;
 const BACKOFF_START_MS = 1000;
 const BACKOFF_MAX_MS = 60_000;
@@ -86,11 +86,11 @@ function computerId(): string {
 /** This computer's key pair. The private key lives only in the OS keychain. */
 export async function computerKeys(): Promise<{ publicKey: string; privateKey: string }> {
   if (state.keys) return state.keys;
-  const privateKey = await secureGet(PRIVATE_KEY_SECRET);
+  const privateKey = await secureGet(PRIVATE_KEY_SLOT);
   const publicKey = localStorage.getItem(PUBLIC_KEY_KEY);
   if (privateKey && publicKey) { state.keys = { publicKey, privateKey }; return state.keys; }
   const pair = await generateKeyPair();
-  await secureSet(PRIVATE_KEY_SECRET, pair.privateKey);
+  await secureSet(PRIVATE_KEY_SLOT, pair.privateKey);
   localStorage.setItem(PUBLIC_KEY_KEY, pair.publicKey);
   state.keys = pair;
   return pair;
