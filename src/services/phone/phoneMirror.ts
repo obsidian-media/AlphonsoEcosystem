@@ -10,6 +10,7 @@ import { redactText } from '../sentinel/exactChecks';
 import { listPhoneChat, onPhoneChatChange } from './phoneChatLog';
 import { contentMirrorData } from './contentMirror';
 import { boardroomMirrorData, memoryMirrorData, projectsMirrorData } from './phase3Mirror';
+import { connectorsMirrorData, refreshModelChoices, settingsMirrorData, skillsMirrorData, teamsMirrorData } from './phase3bMirror';
 import type { MirroredStore } from './phoneProtocol';
 
 export const MIRROR_BATCH_MS = 500;
@@ -17,6 +18,7 @@ export const MIRROR_REQUESTS = 50;
 const MIRROR_OUTPUT_REQUESTS = 20;
 /** The content stores have no change events (the Calendar page polls too), so the mirror looks every 5 s and sends only what changed. */
 export const CONTENT_POLL_MS = 5000;
+export const MODEL_CHOICES_MS = 60_000;
 
 function clean(value: unknown): unknown {
   const stripped = stripSecretFields(value);
@@ -45,12 +47,16 @@ function storeData(store: MirroredStore): unknown {
   if (store === 'memory') return clean(memoryMirrorData());
   if (store === 'projects') return clean(projectsMirrorData());
   if (store === 'boardroom') return clean(boardroomMirrorData());
+  if (store === 'settings') return clean(settingsMirrorData());
+  if (store === 'teams') return clean(teamsMirrorData());
+  if (store === 'skills') return clean(skillsMirrorData());
+  if (store === 'connectors') return clean(connectorsMirrorData());
   const s = settings();
   return { zeroCostMode: s.zeroCostMode !== false, paidModelsAllowed: !!s.paidModels?.allowed, model: typeof s.selectedModel === 'string' ? s.selectedModel : null };
 }
 
 export function mirrorSnapshots(): Record<MirroredStore, unknown> {
-  return { requests: storeData('requests'), stepOutputs: storeData('stepOutputs'), chat: storeData('chat'), computer: storeData('computer'), content: storeData('content'), memory: storeData('memory'), projects: storeData('projects'), boardroom: storeData('boardroom') };
+  return { requests: storeData('requests'), stepOutputs: storeData('stepOutputs'), chat: storeData('chat'), computer: storeData('computer'), content: storeData('content'), memory: storeData('memory'), projects: storeData('projects'), boardroom: storeData('boardroom'), settings: storeData('settings'), teams: storeData('teams'), skills: storeData('skills'), connectors: storeData('connectors') };
 }
 
 /** Send changes to the phones as they happen, batched. Returns stop(). */
@@ -63,7 +69,10 @@ export function startPhoneMirror(deps: { publish: (store: MirroredStore, data: u
   const offRequests = onRequestStatusChange(() => { schedule('requests'); schedule('stepOutputs'); });
   const offChat = onPhoneChatChange(() => schedule('chat'));
   // These stores have no change events (the Calendar page polls too), so the mirror looks every 5 s and sends only what changed.
-  const polled: MirroredStore[] = ['content', 'memory', 'projects', 'boardroom'];
+  const polled: MirroredStore[] = ['content', 'memory', 'projects', 'boardroom', 'settings', 'teams', 'skills', 'connectors'];
+  // Model choices come from the computer's own lists (Ollama, cloud providers): read now and every minute.
+  void refreshModelChoices();
+  const choicesTimer = setInterval(() => { void refreshModelChoices(); }, MODEL_CHOICES_MS);
   const last = new Map(polled.map((s) => [s, JSON.stringify(storeData(s))]));
   const contentTimer = setInterval(() => {
     for (const store of polled) {
@@ -72,5 +81,5 @@ export function startPhoneMirror(deps: { publish: (store: MirroredStore, data: u
       if (text !== last.get(store)) { last.set(store, text); deps.publish(store, data, 'change'); }
     }
   }, CONTENT_POLL_MS);
-  return () => { offRequests(); offChat(); clearInterval(contentTimer); for (const t of timers.values()) clearTimeout(t); timers.clear(); };
+  return () => { offRequests(); offChat(); clearInterval(contentTimer); clearInterval(choicesTimer); for (const t of timers.values()) clearTimeout(t); timers.clear(); };
 }

@@ -130,6 +130,10 @@ export function withStill(notice: PhoneNotification, still: string | null): Phon
   return sealedNoticeChars(full) < PUSH_STILL_LIMIT ? full : notice;
 }
 
+function boardroomNoticesOff(): boolean {
+  try { return JSON.parse(localStorage.getItem('alphonso_settings') || '{}')?.phoneNotify?.boardroomEscalations === false; } catch { return false; }
+}
+
 function readReady(): string[] | null {
   try { const raw = localStorage.getItem(PHONE_READY_SENT_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
@@ -186,6 +190,8 @@ export function startPhoneNotifications(deps: {
     if (sent === null) { writeBoardroomSent(fresh.map((n) => n.key)); return; }
     if (fresh.length === 0) return;
     writeBoardroomSent([...sent, ...fresh.map((n) => n.key)]);
+    // Switched off on the phone (phase 3 part B): counted as sent, so switching back on brings no old ones.
+    if (boardroomNoticesOff()) return;
     for (const n of fresh) deps.push(n);
   };
   const check = () => {

@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 381 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 383 services and 185 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -472,6 +472,7 @@ Source-backed inventory: 381 services and 185 components. Human purpose descript
 | service | `src/services/phone/contentMirror.ts` | `CONTENT_PROJECTS`, `contentMirrorData`, `mediaOffered`, `MediaRef`, `PhoneProject`, `projectMedia`, `versionMedia` |
 | service | `src/services/phone/contentStamps.ts` | `postsStamp`, `postStamp`, `stepStamp` |
 | service | `src/services/phone/desktopSignIn.ts` | `createDesktopPhoneSignIn`, `desktopSignInConfig`, `NO_SIGN_IN_PAGE` |
+| service | `src/services/phone/phase3bMirror.ts` | `cachedModelChoices`, `connectorsMirrorData`, `PhoneConnector`, `PhoneSettings`, `PhoneSkills`, `PhoneTeam`, `ProviderChoice`, `refreshModelChoices`, `resetPhase3bMirrorForTests`, `settingsMirrorData`, `skillsMirrorData`, `teamsMirrorData` |
 | service | `src/services/phone/phase3Calls.ts` | `PHASE3_CALLS`, `Phase3CallName`, `PHONE_SEARCH_RESULTS`, `resetPhase3CallsForTests`, `STALE` |
 | service | `src/services/phone/phase3Mirror.ts` | `BOARDROOM_MIRROR_BYTES`, `BoardroomMirror`, `boardroomMirrorData`, `MASKED_LINE`, `MemoryMirror`, `memoryMirrorData`, `PHONE_DECISIONS`, `PHONE_THREAD_MESSAGES`, `phoneMessage`, `PhoneThreadMessage`, `ProjectMirror`, `projectsMirrorData` |
 | service | `src/services/phone/phoneAccount.ts` | `isSignedIn`, `NOT_AVAILABLE`, `phoneAccessAvailable`, `phoneAuth`, `phoneRelayUrl`, `PhoneSignIn`, `setPhoneSignInProvider`, `signedInEmail`, `signInComputer`, `SignInMethod`, `signOutComputer` |
@@ -479,7 +480,7 @@ Source-backed inventory: 381 services and 185 components. Human purpose descript
 | service | `src/services/phone/phoneChatLog.ts` | `appendPhoneChat`, `listPhoneChat`, `onPhoneChatChange`, `PHONE_CHAT_KEY`, `PHONE_CHAT_LIMIT`, `PhoneChatMessage` |
 | service | `src/services/phone/phoneCrypto.ts` | `generateKeyPair`, `open`, `openAnonymous`, `seal`, `sealAnonymous` |
 | service | `src/services/phone/phoneLink.ts` | `computerKeys`, `listPhones`, `onPhoneCall`, `PairedPhone`, `PAIRING_WINDOW_MS`, `pairingQr`, `PHONE_ACCESS_KEY`, `phoneAccessOn`, `PhoneAuth`, `PHONES_KEY`, `PREVIEW_RESERVE_SHARE`, `previewFits`, `publish`, `pushNotice`, `relayRoom`, `RelaySocket`, `removePhone`, `resetPhoneLinkForTests`, `setPhoneAccess`, `SocketFactory`, `startPhoneLink`, `webSocketFactory` |
-| service | `src/services/phone/phoneMirror.ts` | `CONTENT_POLL_MS`, `MIRROR_BATCH_MS`, `MIRROR_REQUESTS`, `mirrorSnapshots`, `startPhoneMirror` |
+| service | `src/services/phone/phoneMirror.ts` | `CONTENT_POLL_MS`, `MIRROR_BATCH_MS`, `MIRROR_REQUESTS`, `mirrorSnapshots`, `MODEL_CHOICES_MS`, `startPhoneMirror` |
 | service | `src/services/phone/phoneNotifications.ts` | `boardroomEscalations`, `PHONE_BOARDROOM_SENT_KEY`, `PHONE_NOTIFY_SENT_KEY`, `PHONE_READY_SENT_KEY`, `phoneNotificationsFor`, `phoneNotifySettings`, `PUSH_STILL_LIMIT`, `readyToCheck`, `sealedNoticeChars`, `startPhoneNotifications`, `withStill` |
 | service | `src/services/phone/phonePreviews.ts` | `ensurePreview`, `FILE_GONE`, `makeStill`, `NOT_READY`, `PREVIEW_PIECE_BYTES`, `PreviewInfo`, `PreviewResult`, `readPiece` |
 | service | `src/services/phone/phoneProtocol.ts` | `decodeMessage`, `encodeMessage`, `MirroredStore`, `openPairingRequest`, `PairingInfo`, `pairingPayload`, `PairingRequest`, `PHONE_MAX_FRAME_BYTES`, `PHONE_PROTOCOL_VERSION`, `PhoneCallName`, `PhoneKeys`, `PhoneMessage`, `PhoneNotification`, `readPairingPayload`, `relayHttpBase`, `sealPairingRequest` |
@@ -494,6 +495,7 @@ Source-backed inventory: 381 services and 185 components. Human purpose descript
 | service | `src/services/projectDirectoryService.ts` | `clearProjectDirectory`, `getProjectDirectory`, `getProjectDirectoryPath`, `listProjectDirectories`, `setProjectDirectory`, `validateProjectDirectory` |
 | service | `src/services/projectExecution/workshopSessionService.js` | `exportExecutionPacketToFile`, `listWorkshopSessions`, `persistWorkshopSessionToDurableMemory` |
 | service | `src/services/projects/projectStore.ts` | `deleteProject`, `getProject`, `intakeText`, `listProjects`, `PROJECT_NEEDS_TEXT`, `PROJECT_NOT_FOUND`, `PROJECT_TEMPLATE`, `ProjectIntake`, `SavedProject`, `saveProject`, `startProject` |
+| service | `src/services/providerLabels.ts` | `AGENT_PROVIDER_LABELS` |
 | service | `src/services/rc0EvidenceService.ts` | `Rc0Cycle`, `Rc0EvidencePackage`, `Rc0PacketSummary`, `Rc0ReadinessReport`, `Rc0VerificationResults`, `Rc0WorkspaceValidation`, `writeRc0EvidencePackage` |
 | service | `src/services/recoveryService.ts` | `backupMemoryLedger`, `createSnapshot`, `listSnapshots`, `restoreSnapshotById` |
 | service | `src/services/repoAuditService.ts` | `getLastRepoAudit`, `listRepoAudits`, `REPO_AUDIT_SCOPE`, `runRepoAudit`, `summarizeRepoAudit` |

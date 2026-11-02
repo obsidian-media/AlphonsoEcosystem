@@ -14,7 +14,7 @@ export type PhoneCallName = 'chat.send' | 'request.approveStep' | 'request.rejec
   | 'request.sendBack' | 'request.editSendText'
   | import('./phase3Calls').Phase3CallName;
 /** What the computer mirrors to a phone. `computer`: its name, model and modes, never secrets. */
-export type MirroredStore = 'requests' | 'stepOutputs' | 'chat' | 'computer' | 'content' | 'memory' | 'projects' | 'boardroom';
+export type MirroredStore = 'requests' | 'stepOutputs' | 'chat' | 'computer' | 'content' | 'memory' | 'projects' | 'boardroom' | 'settings' | 'teams' | 'skills' | 'connectors';
 export interface PhoneNotification {
   key: string;
   title: string;

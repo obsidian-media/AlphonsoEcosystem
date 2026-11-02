@@ -3,6 +3,7 @@ import { ChevronDown, Cpu } from 'lucide-react';
 import { fetchOllamaModels, getConfiguredOllamaEndpoint, isChatModel, pullOllamaModel } from '../lib/ollama';
 import type { OpenRouterModel } from '../services/connectors/openRouterConnector';
 import type { FreeModelChoice } from '../services/connectors/openRouterModels';
+import { AGENT_PROVIDER_LABELS } from '../services/providerLabels';
 
 const STORAGE_KEY = 'alphonso_selected_model_v1';
 // Computed per-call, not module-scoped constants — the configured endpoint
@@ -356,14 +357,7 @@ function ListedCloudModelPicker({ provider, selectedModel, onModelChange }: Clou
 
 export type ModelProviderId = 'ollama' | CloudProvider | 'hermes' | 'paid';
 
-const PROVIDER_LABELS: Record<ModelProviderId, string> = {
-  ollama: 'Ollama',
-  nvidia_nim: 'NVIDIA NIM',
-  gemini: 'Gemini',
-  openrouter: 'OpenRouter',
-  hermes: 'Hermes',
-  paid: 'Paid'
-};
+const PROVIDER_LABELS: Record<ModelProviderId, string> = AGENT_PROVIDER_LABELS;
 
 const PAID_PROVIDER_NAMES: Record<string, string> = { claude: 'Claude', chatgpt: 'ChatGPT', openrouter: 'OpenRouter' };
 

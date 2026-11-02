@@ -139,4 +139,17 @@ describe('Boardroom escalations', () => {
     stop2(); stop3();
     expect(push.mock.calls.map((c) => c[0].key)).toEqual(['boardroom:new']);
   });
+
+  it('switched off on the phone (phase 3 part B), escalations are counted but not sent', () => {
+    localStorage.clear();
+    const push = vi.fn();
+    const messages = [esc('old')];
+    startPhoneNotifications({ push, requests: () => [], projects: () => [], boardroom: () => ({ messages, threads: [thread] }), intervalMs: 0 })();
+    localStorage.setItem('alphonso_settings', JSON.stringify({ phoneNotify: { boardroomEscalations: false } }));
+    messages.push(esc('new'));
+    startPhoneNotifications({ push, requests: () => [], projects: () => [], boardroom: () => ({ messages, threads: [thread] }), intervalMs: 0 })();
+    localStorage.setItem('alphonso_settings', JSON.stringify({}));
+    startPhoneNotifications({ push, requests: () => [], projects: () => [], boardroom: () => ({ messages, threads: [thread] }), intervalMs: 0 })();
+    expect(push).not.toHaveBeenCalled();
+  });
 });
