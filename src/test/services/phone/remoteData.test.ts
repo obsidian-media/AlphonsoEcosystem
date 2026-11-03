@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createRemoteData, offlineLine, type PhoneTransport } from '../../../services/phone/remoteData';
+import { NEEDS_COMPUTER } from '../../../services/phone/phoneRoute';
 
 function fakeTransport() {
   let mirrorFn: (m: any) => void = () => {};
@@ -190,5 +191,104 @@ describe('Memory, Projects and Boardroom on the phone', () => {
     const data = createRemoteData(t);
     await expect(data.more.call('project.start', { id: 'p1' })).resolves.toMatchObject({ ok: true });
     expect(t.calls.at(-1)).toMatchObject({ name: 'project.start', args: { id: 'p1' } });
+  });
+});
+
+describe('remoteData: answering on the phone (phase 4)', () => {
+  const KEY = 'sk-or-v1-abcdef1234567890abcdef1234567890';
+  const decision = { id: 'd1', kind: 'decision', text: 'The spring launch is on Friday 14 March', topics: [], source: { surface: 'chat', by: 'echo' }, atMs: 1, status: 'active' };
+  beforeEach(() => localStorage.clear());
+
+  async function offlineWithQueued(ask: (system: string, prompt: string) => Promise<string>, text = 'When is the spring launch?') {
+    const t = fakeTransport();
+    t.snapshots.push({ requests: [], stepOutputs: {}, chat: [], computer: {}, memory: { decisions: [decision], cleanup: null } });
+    const asks = { phone: vi.fn(async () => ask), openrouter: vi.fn(async () => null) };
+    const data = createRemoteData(t, {}, {}, { asks });
+    await data.reconnected();
+    t.goOffline(1000);
+    await data.chat.send(text);
+    const id = data.chat.messages().find((m) => m.queued)!.id;
+    return { t, data, id, asks };
+  }
+
+  it('takes the message out of the outbox before asking, then shows the answer with where it came from', async () => {
+    let outboxWhileAsking = 'unset';
+    const { data, id } = await offlineWithQueued(async (system) => {
+      outboxWhileAsking = localStorage.getItem('alphonso_phone_outbox_v1') || '';
+      return system ? 'Friday 14 March.' : '{"route":"direct"}';
+    });
+    await data.chat.answerHere(id, 'phone');
+    expect(JSON.parse(outboxWhileAsking)).toEqual([]);
+    const shown = data.chat.messages();
+    expect(shown.map((m) => [m.role, m.text, m.answeredBy, m.queued])).toEqual([
+      ['user', 'When is the spring launch?', undefined, undefined],
+      ['assistant', 'Friday 14 March.', 'phone', undefined],
+    ]);
+    expect(JSON.parse(localStorage.getItem('alphonso_phone_local_answers_v1') || '[]')).toHaveLength(1);
+  });
+
+  it('puts a message the phone may not answer back in the outbox, with why', async () => {
+    const { data, id } = await offlineWithQueued(async () => 'should not be asked', 'send Sam the meeting notes');
+    await data.chat.answerHere(id, 'phone');
+    const m = data.chat.messages().find((x) => x.id === id)!;
+    expect(m.queued).toBe(true);
+    expect(m.note).toBe(NEEDS_COMPUTER);
+    expect(m.text).toBe('send Sam the meeting notes');
+  });
+
+  it('puts it back with the reason when the model fails', async () => {
+    const { data, id } = await offlineWithQueued(async (system) => {
+      if (!system) return '{"route":"direct"}';
+      throw new Error("OpenRouter couldn't be reached.");
+    });
+    await data.chat.answerHere(id, 'phone');
+    expect(data.chat.messages().find((x) => x.id === id)).toMatchObject({ queued: true, note: "OpenRouter couldn't be reached." });
+  });
+
+  it("an engine that can't be used leaves the message waiting with why", async () => {
+    const { data, id } = await offlineWithQueued(async () => 'x');
+    await data.chat.answerHere(id, 'openrouter');
+    expect(data.chat.messages().find((x) => x.id === id)).toMatchObject({ queued: true, note: expect.stringContaining('OpenRouter') });
+  });
+
+  it('copies each phone answer to the computer once when it is back, then shows it once', async () => {
+    const { t, data, id } = await offlineWithQueued(async (system) => (system ? 'Friday 14 March.' : '{"route":"direct"}'));
+    await data.chat.answerHere(id, 'phone');
+    t.snapshots.push({ requests: [], stepOutputs: {}, chat: [], computer: {} });
+    t.goOnline();
+    await flush(); await flush();
+    const copies = t.calls.filter((c) => c.name === 'chat.phoneAnswered');
+    expect(copies).toHaveLength(1);
+    expect(copies[0].args).toMatchObject({ messageId: id, question: 'When is the spring launch?', answer: 'Friday 14 March.', answeredBy: 'phone' });
+    expect(t.calls.filter((c) => c.name === 'chat.send')).toHaveLength(0);
+    // The computer's conversation now holds it: shown once.
+    t.push({ kind: 'change', store: 'chat', data: [
+      { id, role: 'user', text: 'When is the spring launch?', atMs: 1 },
+      { id: `${id}-a`, role: 'assistant', text: 'Friday 14 March.', atMs: 1, answeredBy: 'phone' },
+    ], version: 1 });
+    expect(data.chat.messages()).toHaveLength(2);
+    t.goOffline(2000);
+    t.snapshots.push({ requests: [], stepOutputs: {}, chat: [], computer: {} });
+    t.goOnline();
+    await flush(); await flush();
+    expect(t.calls.filter((c) => c.name === 'chat.phoneAnswered')).toHaveLength(1);
+  });
+
+  it('never keeps or sends a key, and ignores a second tap while answering', async () => {
+    let release: (v: string) => void = () => {};
+    const { t, data, id } = await offlineWithQueued((system) => (system ? new Promise((r) => { release = r; }) : Promise.resolve('{"route":"direct"}')));
+    const first = data.chat.answerHere(id, 'phone');
+    await flush();
+    expect(data.chat.answering()).toBe(id);
+    await data.chat.answerHere(id, 'phone');
+    release('Friday.');
+    await first;
+    expect(data.chat.answering()).toBeNull();
+    t.snapshots.push({ requests: [], stepOutputs: {}, chat: [], computer: {} });
+    t.goOnline();
+    await flush(); await flush();
+    expect(JSON.stringify(t.calls)).not.toContain(KEY);
+    expect(Object.values({ ...localStorage }).join('')).not.toContain(KEY);
+    expect(data.chat.messages().filter((m) => m.role === 'assistant')).toHaveLength(1);
   });
 });
