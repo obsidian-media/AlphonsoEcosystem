@@ -10,7 +10,7 @@ vi.mock('../../../services/secureStorageService', () => ({
 import { generateKeyPair } from '../../../services/phone/phoneCrypto';
 import { decodeMessage, encodeMessage, readPairingPayload, sealPairingRequest } from '../../../services/phone/phoneProtocol';
 import {
-  PHONE_ACCESS_KEY, computerKeys, listPhones, onPhoneCall, pairingQr, phoneAccessOn, removePhone, resetPhoneLinkForTests, setPhoneAccess, startPhoneLink,
+  PHONE_ACCESS_KEY, computerPublicKey, listPhones, setLinkBox, localLinkBox, onPhoneCall, pairingQr, phoneAccessOn, removePhone, resetPhoneLinkForTests, setPhoneAccess, startPhoneLink,
   publish, relayRoom, previewFits, PREVIEW_RESERVE_SHARE,
   type RelaySocket,
 } from '../../../services/phone/phoneLink';
@@ -161,13 +161,37 @@ describe('phoneLink', () => {
     expect(sockets).toHaveLength(3);
   });
 
-  it("the computer's private key is read from the keychain and never written to localStorage", async () => {
-    const keys = await computerKeys();
-    expect(keychain.get('alphonso_phone_link_private_key')).toBe(keys.privateKey);
+  it("the computer's private key is kept in the keychain, never in localStorage, and never handed out", async () => {
+    const publicKey = await computerPublicKey();
+    const privateKey = keychain.get('alphonso_phone_link_private_key')!;
+    expect(privateKey).toBeTruthy();
     const everything = Object.keys(localStorage).map((k) => localStorage.getItem(k)).join('|');
-    expect(everything).not.toContain(keys.privateKey);
-    expect((await computerKeys()).privateKey).toBe(keys.privateKey);
+    expect(everything).not.toContain(privateKey);
+    expect(await computerPublicKey()).toBe(publicKey);
     expect(localStorage.getItem(PHONE_ACCESS_KEY)).toBeNull();
+  });
+
+  it('does all its sealing and opening through the box it is given (the backend in the desktop app)', async () => {
+    const real = localLinkBox();
+    const used: string[] = [];
+    setLinkBox({
+      publicKey: () => { used.push('publicKey'); return real.publicKey(); },
+      seal: (m, k) => { used.push('seal'); return real.seal(m, k); },
+      open: (f, k) => { used.push('open'); return real.open(f, k); },
+      openAnonymous: (f) => { used.push('openAnonymous'); return real.openAnonymous(f); },
+    });
+    const { factory, sockets } = fakeSocketFactory();
+    const handled = vi.fn(async () => 'fine');
+    onPhoneCall(handled);
+    const qr = await makeQr();
+    startPhoneLink({ relayUrl: RELAY, auth, socket: factory });
+    await flush();
+    const { phone } = await pairOnePhone(sockets, qr);
+    const call = await encodeMessage({ id: 'c1', kind: 'call', name: 'request.stop', args: { requestId: 'r1' } }, { theirPublic: qr.computerPublicKey, myPrivate: phone.privateKey });
+    sockets.at(-1)!.emit({ type: 'from', deviceId: 'ph-1', frame: call });
+    await flush(); await flush();
+    expect(handled).toHaveBeenCalled();
+    expect(used).toEqual(expect.arrayContaining(['publicKey', 'openAnonymous', 'open', 'seal']));
   });
 
   it("counts what it sends against the relay's daily limit, from when the window started", async () => {

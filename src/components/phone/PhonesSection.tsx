@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Button } from '../ui';
 import {
-  listPhones, pairingQr, phoneAccessOn, removePhone, setPhoneAccess, startPhoneLink, webSocketFactory, type PairedPhone,
+  listPhones, pairingQr, phoneAccessOn, removePhone, setPhoneAccess, startPhoneLink, linkSocketFactory, type PairedPhone,
 } from '../../services/phone/phoneLink';
 import {
   isSignedIn, phoneAccessAvailable, phoneAuth, phoneRelayUrl, signInComputer, signedInEmail, type SignInMethod,
@@ -42,7 +42,7 @@ export function PhonesSection({ computerName = 'This computer' }: { computerName
 
   useEffect(() => {
     if (!qr || !relayUrl) return undefined;
-    const stop = startPhoneLink({ relayUrl, auth: phoneAuth, socket: webSocketFactory });
+    const stop = startPhoneLink({ relayUrl, auth: phoneAuth, socket: linkSocketFactory() });
     const poll = setInterval(() => {
       const now = listPhones();
       setPhones(now);
@@ -74,7 +74,15 @@ export function PhonesSection({ computerName = 'This computer' }: { computerName
       )}
       {signedIn && <p className="text-xs text-[var(--text-muted)]">Signed in as {signedInEmail()}</p>}
       {signedIn && !qr && (
-        <Button onClick={async () => { setCopied(false); setQr(await pairingQr({ relayUrl, computerName })); }}>Pair a phone</Button>
+        <Button onClick={async () => {
+          setCopied(false);
+          setMessage(null);
+          try {
+            setQr(await pairingQr({ relayUrl, computerName }));
+          } catch (error) {
+            setMessage(`Couldn't make the pairing code: ${String((error as Error)?.message || error)}`);
+          }
+        }}>Pair a phone</Button>
       )}
       {qr && (
         <div className="space-y-2">

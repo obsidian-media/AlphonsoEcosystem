@@ -87,6 +87,28 @@ export async function decodeMessage(frame: string, keys: PhoneKeys): Promise<Pho
   }
 }
 
+/** The same, with the computer's encryption done by a LinkBox (the backend in the desktop
+ *  app), so the computer's private key never has to be in the window. */
+type TextBox = Pick<import('./phoneLink').LinkBox, 'seal' | 'open' | 'openAnonymous'>;
+
+export async function encodeMessageWith(msg: PhoneMessage, box: TextBox, theirPublic: string): Promise<string> {
+  const text = JSON.stringify(msg);
+  const size = new TextEncoder().encode(text).length;
+  if (size > PHONE_MAX_FRAME_BYTES) throw new Error(`Message too large to send (${size} bytes; the limit is ${PHONE_MAX_FRAME_BYTES}).`);
+  return box.seal(text, theirPublic);
+}
+
+export async function decodeMessageWith(frame: string, box: TextBox, theirPublic: string): Promise<PhoneMessage | null> {
+  const text = await box.open(frame, theirPublic);
+  if (!text) return null;
+  try {
+    const v = JSON.parse(text);
+    return isMessage(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The phone's first message to a computer: its key, the QR code's secret and its name,
  *  sealed to the computer's key from the QR code. */
 export interface PairingRequest { phonePublicKey: string; pairingSecret: string; phoneName: string }
@@ -97,9 +119,17 @@ export async function sealPairingRequest(request: PairingRequest, computerPublic
 
 export async function openPairingRequest(sealed: string, computer: { publicKey: string; privateKey: string }): Promise<PairingRequest | null> {
   const bytes = await openAnonymous(sealed, computer);
-  if (!bytes) return null;
+  return bytes ? readPairingRequest(new TextDecoder().decode(bytes)) : null;
+}
+
+export async function openPairingRequestWith(sealed: string, box: TextBox): Promise<PairingRequest | null> {
+  const text = await box.openAnonymous(sealed);
+  return text === null ? null : readPairingRequest(text);
+}
+
+function readPairingRequest(text: string): PairingRequest | null {
   try {
-    const v = JSON.parse(new TextDecoder().decode(bytes));
+    const v = JSON.parse(text);
     if (typeof v?.phonePublicKey !== 'string' || typeof v?.pairingSecret !== 'string') return null;
     return { phonePublicKey: v.phonePublicKey, pairingSecret: v.pairingSecret, phoneName: String(v.phoneName || 'Phone').slice(0, 60) };
   } catch {

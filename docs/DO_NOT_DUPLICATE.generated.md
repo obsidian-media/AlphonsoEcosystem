@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 387 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 388 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -466,6 +466,7 @@ Source-backed inventory: 387 services and 184 components. Human purpose descript
 | service | `src/services/packetExecutionService.ts` | `executeApprovedPacket` |
 | service | `src/services/parallelExecutionService.ts` | `createTaskQueue`, `executeBatch`, `executeParallel`, `executeWithRetry`, `ParallelExecutionOptions`, `ParallelResult`, `ParallelTask` |
 | service | `src/services/phone/asksLess.ts` | `asksLess` |
+| service | `src/services/phone/backendLink.ts` | `backendLinkBox`, `backendSocketFactory`, `backendUnpair`, `inDesktopApp`, `RELAY_EVENT` |
 | service | `src/services/phone/boardData.ts` | `BoardData`, `BoardDataProvider`, `localBoardData`, `runResultText`, `sendTextAnswer`, `useBoardData` |
 | service | `src/services/phone/contentCalls.ts` | `CHANGED_ON_COMPUTER`, `CONTENT_CALLS`, `ContentAnswer`, `mediaPreview`, `NOT_OFFERED`, `POST_GONE`, `postsStamp`, `postStamp`, `previewLimitLine`, `PreviewPiece`, `PROJECT_GONE`, `resetContentCallsForTests`, `stepStamp` |
 | service | `src/services/phone/contentMirror.ts` | `CONTENT_PROJECTS`, `contentMirrorData`, `mediaOffered`, `MediaRef`, `PhoneProject`, `projectMedia`, `versionMedia` |
@@ -480,12 +481,12 @@ Source-backed inventory: 387 services and 184 components. Human purpose descript
 | service | `src/services/phone/phoneCalls.ts` | `ALREADY_DONE`, `handlePhoneCall`, `NOT_FROM_PHONE`, `PHONE_CALLS`, `resetPhoneCallsForTests` |
 | service | `src/services/phone/phoneChatLog.ts` | `appendPhoneChat`, `listPhoneChat`, `onPhoneChatChange`, `PHONE_CHAT_KEY`, `PHONE_CHAT_LIMIT`, `PhoneChatMessage` |
 | service | `src/services/phone/phoneCrypto.ts` | `generateKeyPair`, `open`, `openAnonymous`, `seal`, `sealAnonymous` |
-| service | `src/services/phone/phoneLink.ts` | `computerKeys`, `listPhones`, `onPhoneCall`, `PairedPhone`, `PAIRING_WINDOW_MS`, `pairingQr`, `PHONE_ACCESS_KEY`, `phoneAccessOn`, `PhoneAuth`, `PHONES_KEY`, `PREVIEW_RESERVE_SHARE`, `previewFits`, `publish`, `pushNotice`, `relayRoom`, `RelaySocket`, `removePhone`, `resetPhoneLinkForTests`, `setPhoneAccess`, `SocketFactory`, `startPhoneLink`, `webSocketFactory` |
+| service | `src/services/phone/phoneLink.ts` | `computerPublicKey`, `LinkBox`, `linkSocketFactory`, `listPhones`, `localLinkBox`, `onPhoneCall`, `PairedPhone`, `PAIRING_WINDOW_MS`, `pairingQr`, `PHONE_ACCESS_KEY`, `phoneAccessOn`, `PhoneAuth`, `PHONES_KEY`, `PREVIEW_RESERVE_SHARE`, `previewFits`, `publish`, `pushNotice`, `relayRoom`, `RelaySocket`, `removePhone`, `resetPhoneLinkForTests`, `setLinkBox`, `setPhoneAccess`, `SocketFactory`, `startPhoneLink`, `webSocketFactory` |
 | service | `src/services/phone/phoneMirror.ts` | `CONTENT_POLL_MS`, `MIRROR_BATCH_MS`, `MIRROR_REQUESTS`, `mirrorSnapshots`, `MODEL_CHOICES_MS`, `startPhoneMirror` |
 | service | `src/services/phone/phoneNotifications.ts` | `boardroomEscalations`, `PHONE_BOARDROOM_SENT_KEY`, `PHONE_NOTIFY_SENT_KEY`, `PHONE_READY_SENT_KEY`, `phoneNotificationsFor`, `phoneNotifySettings`, `PUSH_STILL_LIMIT`, `readyToCheck`, `sealedNoticeChars`, `startPhoneNotifications`, `withStill` |
 | service | `src/services/phone/phoneOpenRouter.ts` | `openRouterAsk`, `PHONE_OPENROUTER_KEY`, `PhoneHttp` |
 | service | `src/services/phone/phonePreviews.ts` | `ensurePreview`, `FILE_GONE`, `makeStill`, `NOT_READY`, `PREVIEW_PIECE_BYTES`, `PreviewInfo`, `PreviewResult`, `readPiece` |
-| service | `src/services/phone/phoneProtocol.ts` | `decodeMessage`, `encodeMessage`, `MirroredStore`, `openPairingRequest`, `PairingInfo`, `pairingPayload`, `PairingRequest`, `PHONE_MAX_FRAME_BYTES`, `PHONE_PROTOCOL_VERSION`, `PhoneCallName`, `PhoneKeys`, `PhoneMessage`, `PhoneNotification`, `readPairingPayload`, `relayHttpBase`, `sealPairingRequest` |
+| service | `src/services/phone/phoneProtocol.ts` | `decodeMessage`, `decodeMessageWith`, `encodeMessage`, `encodeMessageWith`, `MirroredStore`, `openPairingRequest`, `openPairingRequestWith`, `PairingInfo`, `pairingPayload`, `PairingRequest`, `PHONE_MAX_FRAME_BYTES`, `PHONE_PROTOCOL_VERSION`, `PhoneCallName`, `PhoneKeys`, `PhoneMessage`, `PhoneNotification`, `readPairingPayload`, `relayHttpBase`, `sealPairingRequest` |
 | service | `src/services/phone/phoneRoute.ts` | `NEEDS_COMPUTER`, `phoneRoute`, `PhoneRoute` |
 | service | `src/services/phone/remoteData.ts` | `ChatData`, `ChatMessage`, `createRemoteData`, `MoreData`, `offlineLine`, `PhoneAnswerParts`, `PhonePreviewParts`, `PhoneTransport`, `reasonOf`, `StudioData` |
 | service | `src/services/pluginRegistryService.ts` | `appendPluginAuditEntry`, `discoverDiskPluginManifests`, `executePluginToolRun`, `listPluginAudit`, `listPlugins`, `PLUGIN_AUDIT_SCOPE`, `PLUGIN_MANIFEST_FIELDS`, `PluginAuditEntry`, `PluginAuditInput`, `PluginEntry`, `PLUGINS_SCOPE`, `togglePlugin`, `validatePluginManifestDisk`, `verifyPluginSignatureFromRegistry` |
