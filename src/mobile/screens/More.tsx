@@ -9,11 +9,13 @@ import { TeamsScreen } from './Teams';
 import { SkillsScreen } from './Skills';
 import { SettingsScreen } from './PhoneSettings';
 import { ConnectorsScreen } from './Connectors';
+import { OnThisPhoneScreen } from './OnThisPhone';
+import type { PhoneOwnModels } from '../phoneModels';
 
 /** Nothing is left on the computer only since phase 3 part B (2026-11-02). */
 export const ON_COMPUTER_FOR_NOW: string[] = [];
 
-type Page = 'memory' | 'projects' | 'boardroom' | 'teams' | 'skills' | 'settings' | 'connectors';
+type Page = 'memory' | 'projects' | 'boardroom' | 'teams' | 'skills' | 'settings' | 'connectors' | 'phone';
 const PAGES: Array<{ id: Page; name: string }> = [
   { id: 'memory', name: 'Memory' },
   { id: 'projects', name: 'Projects' },
@@ -37,11 +39,13 @@ export interface MoreScreenProps {
   demo?: boolean;
   /** Apple 5.1.1(v): delete the account from inside the app (phase 3 part C). */
   onDeleteAccount?: () => Promise<{ ok: boolean; reason?: string }>;
+  /** Phase 4: what this phone answers with while the computer is off (not in the demo). */
+  phoneModels?: PhoneOwnModels;
 }
 
 export const DEMO_PAIR_FIRST = 'Pair your computer to use this.';
 
-export function MoreScreen({ more, lock, onOpenRequest, openThreadId, lockEnabled, onLockChange, onSignOut, demo = false, onDeleteAccount }: MoreScreenProps) {
+export function MoreScreen({ more, lock, onOpenRequest, openThreadId, lockEnabled, onLockChange, onSignOut, demo = false, onDeleteAccount, phoneModels }: MoreScreenProps) {
   const [page, setPage] = useState<Page | null>(openThreadId ? 'boardroom' : null);
   if (page && demo) {
     return (
@@ -62,13 +66,14 @@ export function MoreScreen({ more, lock, onOpenRequest, openThreadId, lockEnable
         {page === 'skills' && <SkillsScreen more={more} />}
         {page === 'settings' && <SettingsScreen more={more} lock={lock} />}
         {page === 'connectors' && <ConnectorsScreen more={more} />}
+        {page === 'phone' && phoneModels && <OnThisPhoneScreen models={phoneModels} />}
       </div>
     );
   }
   return (
     <div className="space-y-4 pt-2 text-sm">
       <ul className="space-y-2">
-        {PAGES.map((p) => (
+        {[...PAGES, ...(phoneModels ? [{ id: 'phone' as const, name: 'On this phone' }] : [])].map((p) => (
           <li key={p.id}>
             <button type="button" onClick={() => setPage(p.id)} className="min-h-11 w-full rounded-xl bg-(--surface-2) p-3 text-left font-medium">{p.name}</button>
           </li>

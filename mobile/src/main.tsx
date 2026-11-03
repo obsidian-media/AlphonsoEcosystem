@@ -9,7 +9,7 @@ import { MobileApp } from '../../src/mobile/MobileApp';
 import { connectPhone, pairPhone } from '../../src/mobile/phoneSession';
 import { webSocketFactory } from '../../src/services/phone/phoneLink';
 import { setLinkOpener } from '../../src/services/browserAutomationService';
-import { createSignIn, lock, networkKind, openInBrowser, notificationToken, onNotificationAction, phoneName, previewStore, scanQr, secrets } from './native';
+import { createSignIn, lock, networkKind, openInBrowser, notificationToken, onNotificationAction, phoneModels, phoneName, previewStore, scanQr, secrets } from './native';
 
 const previews = { previewStore, network: networkKind };
 // Source links open in the phone's browser (after the same disguised-link check as the computer).
@@ -33,7 +33,7 @@ async function start() {
   if (localStorage.getItem('alphonso_phone_pairing_v1')) fcmToken = await notificationToken();
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <MobileApp signIn={signIn} secrets={secrets} lock={lock} pair={pair} connect={connect} scanQr={scanQr} phoneName={phoneName()} onNotificationAction={onNotificationAction} previews={previews} />
+      <MobileApp signIn={signIn} secrets={secrets} lock={lock} pair={pair} connect={connect} scanQr={scanQr} phoneName={phoneName()} onNotificationAction={onNotificationAction} previews={previews} phoneModels={phoneModels} />
     </React.StrictMode>,
   );
 }

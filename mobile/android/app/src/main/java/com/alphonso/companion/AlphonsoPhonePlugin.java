@@ -58,6 +58,21 @@ public class AlphonsoPhonePlugin extends Plugin {
         }
     }
 
+    // Phone phase 4: Gemini Nano has not been tested on a real Android phone (none available),
+    // so Android says the on-device model is not available.
+    @PluginMethod
+    public void modelStatus(PluginCall call) {
+        JSObject out = new JSObject();
+        out.put("available", false);
+        out.put("reason", "android");
+        call.resolve(out);
+    }
+
+    @PluginMethod
+    public void modelAnswer(PluginCall call) {
+        call.reject("This phone's own model isn't supported yet.");
+    }
+
     @PluginMethod
     public void getSecret(PluginCall call) {
         String key = call.getString("key");

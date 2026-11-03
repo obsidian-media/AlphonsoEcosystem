@@ -2,7 +2,7 @@
 // sign-in (Firebase Authentication: Apple, Google, email link), secure storage and Face ID /
 // fingerprint and notifications (this app's own AlphonsoPhone plugin, mobile/ios and
 // mobile/android), and the QR scanner.
-import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+import { Capacitor, CapacitorHttp, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint } from '@capacitor/barcode-scanner';
@@ -13,6 +13,8 @@ import type { PreviewStore } from '../../src/mobile/previewFetch';
 import type { PhoneSignIn, SignInMethod } from '../../src/services/phone/phoneAccount';
 import type { PhoneSecrets } from '../../src/mobile/phoneSession';
 import type { NotificationAction, OnNotificationAction, PhoneLock } from '../../src/mobile/MobileApp';
+import type { PhoneOwnModels } from '../../src/mobile/phoneModels';
+import { openRouterAsk, PHONE_OPENROUTER_KEY, type PhoneHttp } from '../../src/services/phone/phoneOpenRouter';
 
 interface AlphonsoPhonePlugin {
   getSecret(o: { key: string }): Promise<{ value: string | null }>;
@@ -22,6 +24,8 @@ interface AlphonsoPhonePlugin {
   pushToken(): Promise<{ token: string | null }>;
   takePendingActions(): Promise<{ actions: NotificationAction[] }>;
   addListener(event: 'notificationAction', fn: (a: NotificationAction) => void): Promise<PluginListenerHandle>;
+  modelStatus(): Promise<{ available: boolean; reason: string | null }>;
+  modelAnswer(o: { system: string; prompt: string }): Promise<{ text: string; ms: number }>;
 }
 const AlphonsoPhone = registerPlugin<AlphonsoPhonePlugin>('AlphonsoPhone');
 
@@ -145,6 +149,42 @@ export async function createSignIn(): Promise<PhoneSignIn> {
     signOut: async () => { await FirebaseAuthentication.signOut(); user = null; },
   };
 }
+
+// Phase 4: Apple's on-device model and OpenRouter's free models, for answering while the computer is off.
+const MODEL_ANSWER_LIMIT_MS = 120000;
+const phoneHttp: PhoneHttp = async (r) => {
+  const res = await CapacitorHttp.request({ url: r.url, method: r.method, headers: r.headers, data: r.body, connectTimeout: 30000, readTimeout: MODEL_ANSWER_LIMIT_MS });
+  return { status: res.status, data: res.data };
+};
+const modelStatus = async () => {
+  try { return await AlphonsoPhone.modelStatus(); } catch { return { available: false, reason: null }; }
+};
+const appleAsk = async (system: string, prompt: string): Promise<string> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const r = await Promise.race([
+      AlphonsoPhone.modelAnswer({ system, prompt }),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`No answer after ${MODEL_ANSWER_LIMIT_MS / 1000} seconds (timed out).`)), MODEL_ANSWER_LIMIT_MS); }),
+    ]);
+    return r.text;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+export const phoneModels: PhoneOwnModels = {
+  answer: {
+    asks: {
+      phone: async () => ((await modelStatus()).available ? appleAsk : null),
+      openrouter: async () => {
+        const key = await secrets.get(PHONE_OPENROUTER_KEY);
+        return key ? openRouterAsk(phoneHttp, key) : null;
+      },
+    },
+  },
+  modelStatus,
+  saveOpenRouterKey: (key) => secrets.set(PHONE_OPENROUTER_KEY, key),
+  hasOpenRouterKey: async () => !!(await secrets.get(PHONE_OPENROUTER_KEY)),
+};
 
 export function phoneName(): string {
   return Capacitor.getPlatform() === 'ios' ? 'iPhone' : 'Android phone';

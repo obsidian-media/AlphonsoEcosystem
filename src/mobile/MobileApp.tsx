@@ -12,6 +12,7 @@ import { phoneRelayUrl } from '../services/phone/phoneAccount';
 import { SignInScreen } from './screens/SignIn';
 import { PairScreen } from './screens/Pair';
 import { ChatScreen } from './screens/Chat';
+import type { PhoneOwnModels } from './phoneModels';
 import { RequestsScreen } from './screens/Requests';
 import { MoreScreen } from './screens/More';
 import { StudioScreen } from './screens/Studio';
@@ -48,6 +49,8 @@ export interface MobileAppProps {
   previews?: PhonePreviewParts;
   /** The relay address for Delete my account when the phone isn't paired; the build's by default (tests pass one). */
   deleteRelayUrl?: string;
+  /** Apple's model and OpenRouter free on this phone (phase 4): answering while the computer is off. */
+  phoneModels?: PhoneOwnModels;
 }
 
 export function lockOn(): boolean { return localStorage.getItem(PHONE_LOCK_KEY) !== 'off'; }
@@ -55,12 +58,12 @@ export function lockOn(): boolean { return localStorage.getItem(PHONE_LOCK_KEY) 
 /** The demo never asks for Face ID: every action is refused anyway. */
 const DEMO_LOCK: PhoneLock = { confirm: async () => true };
 
-function LinkedApp({ link, lock: realLock, lockEnabled, onLockChange, onSignOut, onNotificationAction, previews, demo = false, onDeleteAccount }: { link: PhoneLink; lock: PhoneLock; lockEnabled: boolean; onLockChange: (on: boolean) => void; onSignOut: () => void; onNotificationAction?: OnNotificationAction; previews?: PhonePreviewParts; demo?: boolean; onDeleteAccount?: () => Promise<{ ok: boolean; reason?: string }> }) {
+function LinkedApp({ link, lock: realLock, lockEnabled, onLockChange, onSignOut, onNotificationAction, previews, demo = false, onDeleteAccount, phoneModels }: { link: PhoneLink; lock: PhoneLock; lockEnabled: boolean; onLockChange: (on: boolean) => void; onSignOut: () => void; onNotificationAction?: OnNotificationAction; previews?: PhonePreviewParts; demo?: boolean; onDeleteAccount?: () => Promise<{ ok: boolean; reason?: string }>; phoneModels?: PhoneOwnModels }) {
   const data = useMemo(() => {
-    if (!demo) return createRemoteData(link, previews);
+    if (!demo) return createRemoteData(link, previews, {}, phoneModels?.answer);
     const { parts, options } = demoDataOptions();
     return createRemoteData(link, parts, options);
-  }, [link, previews, demo]);
+  }, [link, previews, demo, phoneModels]);
   const lock = demo ? DEMO_LOCK : realLock;
   // A step that spends, sends or publishes, or deletes asks for Face ID / fingerprint first.
   const board = useMemo(() => (demo ? data.board : withLockedConfirm(data.board, lock)), [data, lock, demo]);
@@ -109,14 +112,14 @@ function LinkedApp({ link, lock: realLock, lockEnabled, onLockChange, onSignOut,
       {!online && <OfflineBanner text={offlineLine(since)} />}
       {notice && <p role="status" className="mx-4 mb-2 rounded-lg bg-(--surface-3) px-3 py-2 text-xs">{notice}</p>}
       <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-        {tab === 'chat' && <ChatScreen chat={data.chat} />}
+        {tab === 'chat' && <ChatScreen chat={data.chat} offline={!online && !demo} models={demo ? undefined : phoneModels} />}
         {tab === 'requests' && <BoardDataProvider value={board}><RequestsScreen key={selected || 'all'} selectedRequestId={selected} /></BoardDataProvider>}
         {tab === 'studio' && <StudioScreen key={studioProject || 'all'} studio={data.studio} lock={lock} openProjectId={studioProject} />}
         {tab === 'calendar' && <CalendarScreen studio={data.studio} lock={lock} />}
         {tab === 'more' && (
           <MoreScreen key={boardroomThread || 'more'} more={data.more} lock={lock} openThreadId={boardroomThread}
             onOpenRequest={(requestId) => { setSelected(requestId); setTab('requests'); }}
-            lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} demo={demo} onDeleteAccount={onDeleteAccount} />
+            lockEnabled={lockEnabled} onLockChange={onLockChange} onSignOut={onSignOut} demo={demo} onDeleteAccount={onDeleteAccount} phoneModels={demo ? undefined : phoneModels} />
         )}
       </main>
       <nav role="tablist" className="grid grid-cols-5 border-t border-(--border) text-xs">
@@ -192,6 +195,7 @@ export function MobileApp(props: MobileAppProps) {
       onLockChange={(on) => { localStorage.setItem(PHONE_LOCK_KEY, on ? 'on' : 'off'); setLockEnabled(on); }}
       onSignOut={async () => { link.stop(); await props.signIn.signOut(); setLink(null); setSignedIn(false); }}
       onDeleteAccount={removeAccount}
+      phoneModels={props.phoneModels}
     />
   );
 }
