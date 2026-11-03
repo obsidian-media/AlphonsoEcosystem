@@ -71,6 +71,19 @@ export function ruleRoute(text: string): JoseRouteDecision | null {
   return null;
 }
 
+/** The question Jose's model is asked: answer directly, or plan (also used by the phone test round). */
+export function joseDecisionPrompt(text: string, history?: { role: string; content: string }[]): string {
+  const recent = (history || []).slice(-4).map((m) => `${m.role}: ${String(m.content).slice(0, 300)}`).join('\n');
+  return [
+    'You are Jose, the orchestrator. Decide whether to answer this message directly, or to plan work for your agents.',
+    'Answer directly for conversation, questions and anything one reply can do. Plan when something must be researched, written, made, built, checked or sent.',
+    'Plan when the message asks to remember or forget something, or to clean up memory: Echo does that.',
+    recent ? `Recent conversation:\n${recent}` : '',
+    `Message: ${String(text || '').trim()}`,
+    'Answer with JSON only: {"route": "direct" or "plan", "reason": "<short reason>"}',
+  ].filter(Boolean).join('\n\n');
+}
+
 export async function decideJoseRoute(text: string, options: { history?: { role: string; content: string }[] } = {}): Promise<JoseRouteDecision> {
   const value = String(text || '').trim();
   const byRule = ruleRoute(value);
@@ -79,15 +92,7 @@ export async function decideJoseRoute(text: string, options: { history?: { role:
   // same dog wear a different costume" has no picture word, and went to Alphonso).
   if (earlierPictureFor(value, options.history)) return { route: 'plan', source: 'rule', reason: 'A change to the picture just shown: Miya makes it.' };
 
-  const recent = (options.history || []).slice(-4).map((m) => `${m.role}: ${String(m.content).slice(0, 300)}`).join('\n');
-  const prompt = [
-    'You are Jose, the orchestrator. Decide whether to answer this message directly, or to plan work for your agents.',
-    'Answer directly for conversation, questions and anything one reply can do. Plan when something must be researched, written, made, built, checked or sent.',
-    'Plan when the message asks to remember or forget something, or to clean up memory: Echo does that.',
-    recent ? `Recent conversation:\n${recent}` : '',
-    `Message: ${value}`,
-    'Answer with JSON only: {"route": "direct" or "plan", "reason": "<short reason>"}',
-  ].filter(Boolean).join('\n\n');
+  const prompt = joseDecisionPrompt(value, options.history);
 
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
