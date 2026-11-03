@@ -143,7 +143,7 @@ import { expireWaitingRequests } from './services/jose/joseExpiry';
 import { loadUserSkills } from './services/skills/userSkills';
 import { startPostScheduler, stopScheduler } from './services/marcusExecutionService';
 import { startResourceWatcher } from './services/resources/idleStop';
-import { startPhoneLink, phoneAccessOn, webSocketFactory, onPhoneCall, publish as publishToPhones, pushNotice } from './services/phone/phoneLink';
+import { startPhoneLink, phoneAccessOn, linkSocketFactory, onPhoneCall, publish as publishToPhones, pushNotice } from './services/phone/phoneLink';
 import { startPhoneNotifications } from './services/phone/phoneNotifications';
 import { handlePhoneCall } from './services/phone/phoneCalls';
 import { startPhoneMirror } from './services/phone/phoneMirror';
@@ -231,7 +231,7 @@ function AppShell() {
     if (!relayUrl || !phoneAccessOn()) return undefined;
     const offCalls = onPhoneCall(handlePhoneCall);
     const stopMirror = startPhoneMirror({ publish: publishToPhones });
-    const stopLink = startPhoneLink({ relayUrl, auth: phoneAuth, socket: webSocketFactory });
+    const stopLink = startPhoneLink({ relayUrl, auth: phoneAuth, socket: linkSocketFactory() });
     const stopNotices = startPhoneNotifications({ push: pushNotice });
     return () => { stopNotices(); stopLink(); stopMirror(); offCalls(); };
   }, []);

@@ -12,6 +12,7 @@ const { phones, link } = vi.hoisted(() => {
   setPhoneAccess: vi.fn(),
   startPhoneLink: vi.fn(() => () => {}),
   webSocketFactory: vi.fn(),
+  linkSocketFactory: vi.fn(() => vi.fn()),
 };
   return { phones, link };
 });
@@ -65,6 +66,15 @@ describe('PhonesSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy the code' }));
     await waitFor(() => expect(clipboard.writeClipboard).toHaveBeenCalledWith('alphonso-pair:{"x":1}'));
     expect(await screen.findByText('Copied.')).toBeTruthy();
+  });
+
+  it("says why when the pairing code can't be made, instead of doing nothing", async () => {
+    setPhoneSignInProvider(provider(true));
+    link.pairingQr.mockRejectedValueOnce(new Error("This computer's keychain refused to keep its phone key."));
+    render(<PhonesSection />);
+    fireEvent.click(await screen.findByRole('button', { name: /Pair a phone/ }));
+    expect(await screen.findByText("Couldn't make the pairing code: This computer's keychain refused to keep its phone key.")).toBeTruthy();
+    expect(screen.queryByTestId('phone-pairing-qr')).toBeNull();
   });
 
   it('lists phones with last use', () => {

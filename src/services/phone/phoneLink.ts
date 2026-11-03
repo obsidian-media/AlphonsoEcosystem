@@ -10,11 +10,12 @@
 // forwards.
 import { randomHex, randomId } from '../../lib/randomId';
 import { secureGet, secureSet } from '../secureStorageService';
-import { generateKeyPair } from './phoneCrypto';
+import { generateKeyPair, open, openAnonymous, seal } from './phoneCrypto';
 import {
-  decodeMessage, encodeMessage, openPairingRequest, pairingPayload, relayHttpBase,
+  decodeMessageWith, encodeMessageWith, openPairingRequestWith, pairingPayload, relayHttpBase,
   type MirroredStore, type PhoneMessage, type PhoneNotification,
 } from './phoneProtocol';
+import { backendLinkBox, backendSocketFactory, backendUnpair, inDesktopApp } from './backendLink';
 
 export const PHONE_ACCESS_KEY = 'alphonso_phone_access_v1';
 export const PHONES_KEY = 'alphonso_phones_v1';
@@ -35,10 +36,18 @@ export interface RelaySocket {
   onOpen(fn: () => void): void;
 }
 export type SocketFactory = (url: string) => RelaySocket;
+/** The computer's encryption: in the desktop app the backend does it (backendLink.ts) and the
+ *  private key never reaches the window; elsewhere (tests, a browser) libsodium does. */
+export interface LinkBox {
+  publicKey(): Promise<string>;
+  seal(message: string, theirPublic: string): Promise<string>;
+  open(sealed: string, theirPublic: string): Promise<string | null>;
+  openAnonymous(sealed: string): Promise<string | null>;
+}
 type CallHandler = (msg: Extract<PhoneMessage, { kind: 'call' }>, fromDeviceId: string) => Promise<unknown>;
 
 interface LinkState {
-  keys: { publicKey: string; privateKey: string } | null;
+  box: LinkBox | null;
   pairing: { secret: string; expiresAtMs: number } | null;
   socket: RelaySocket | null;
   stopped: boolean;
@@ -54,7 +63,7 @@ interface LinkState {
 
 let state: LinkState = freshState();
 function freshState(): LinkState {
-  return { keys: null, pairing: null, socket: null, stopped: true, handlers: new Set(), accessListeners: new Set(), versions: new Map(), now: () => Date.now(), relayLimits: null, sent: null };
+  return { box: null, pairing: null, socket: null, stopped: true, handlers: new Set(), accessListeners: new Set(), versions: new Map(), now: () => Date.now(), relayLimits: null, sent: null };
 }
 export function resetPhoneLinkForTests(): void { state.socket?.close(); state = freshState(); }
 
@@ -83,33 +92,67 @@ function computerId(): string {
   return id;
 }
 
-/** This computer's key pair. The private key lives only in the OS keychain. */
-export async function computerKeys(): Promise<{ publicKey: string; privateKey: string }> {
-  if (state.keys) return state.keys;
-  const privateKey = await secureGet(PRIVATE_KEY_SLOT);
-  const publicKey = localStorage.getItem(PUBLIC_KEY_KEY);
-  if (privateKey && publicKey) { state.keys = { publicKey, privateKey }; return state.keys; }
-  const pair = await generateKeyPair();
-  await secureSet(PRIVATE_KEY_SLOT, pair.privateKey);
-  localStorage.setItem(PUBLIC_KEY_KEY, pair.publicKey);
-  state.keys = pair;
-  return pair;
+/** libsodium in the window, for tests and a browser: the private key lives only in the OS
+ *  keychain (or this page's memory) and stays inside this box. */
+export function localLinkBox(): LinkBox {
+  let keys: { publicKey: string; privateKey: string } | null = null;
+  const load = async () => {
+    if (keys) return keys;
+    const privateKey = await secureGet(PRIVATE_KEY_SLOT);
+    const publicKey = localStorage.getItem(PUBLIC_KEY_KEY);
+    if (privateKey && publicKey) { keys = { publicKey, privateKey }; return keys; }
+    const pair = await generateKeyPair();
+    await secureSet(PRIVATE_KEY_SLOT, pair.privateKey);
+    localStorage.setItem(PUBLIC_KEY_KEY, pair.publicKey);
+    keys = pair;
+    return pair;
+  };
+  return {
+    publicKey: async () => (await load()).publicKey,
+    seal: async (message, theirPublic) => seal(new TextEncoder().encode(message), theirPublic, (await load()).privateKey),
+    open: async (sealed, theirPublic) => {
+      const bytes = await open(sealed, theirPublic, (await load()).privateKey);
+      return bytes ? new TextDecoder().decode(bytes) : null;
+    },
+    openAnonymous: async (sealed) => {
+      const bytes = await openAnonymous(sealed, await load());
+      return bytes ? new TextDecoder().decode(bytes) : null;
+    },
+  };
+}
+
+function linkBox(): LinkBox {
+  if (!state.box) state.box = inDesktopApp() ? backendLinkBox : localLinkBox();
+  return state.box;
+}
+
+/** Use this encryption from now on (tests). */
+export function setLinkBox(box: LinkBox): void { state.box = box; }
+
+/** This computer's public key for phones; the private key never leaves its box. */
+export async function computerPublicKey(): Promise<string> {
+  return linkBox().publicKey();
+}
+
+/** The relay connection to use: the backend's in the desktop app, else the window's own. */
+export function linkSocketFactory(): SocketFactory {
+  return inDesktopApp() ? backendSocketFactory : webSocketFactory;
 }
 
 // ── Pairing ─────────────────────────────────────────────────────────────────
 
 /** The text for the pairing QR code; its secret works once, for PAIRING_WINDOW_MS. */
 export async function pairingQr(input: { relayUrl: string; computerName: string; nowMs?: number }): Promise<string> {
-  const keys = await computerKeys();
+  const publicKey = await computerPublicKey();
   const secret = randomHex(32);
   state.pairing = { secret, expiresAtMs: (input.nowMs ?? state.now()) + PAIRING_WINDOW_MS };
-  return pairingPayload({ computerId: computerId(), computerPublicKey: keys.publicKey, computerName: input.computerName, relayUrl: input.relayUrl, pairingSecret: secret });
+  return pairingPayload({ computerId: computerId(), computerPublicKey: publicKey, computerName: input.computerName, relayUrl: input.relayUrl, pairingSecret: secret });
 }
 
 async function tryPairing(deviceId: string, frame: string): Promise<boolean> {
   const pending = state.pairing;
   if (!pending || state.now() > pending.expiresAtMs) return false;
-  const request = await openPairingRequest(frame, await computerKeys());
+  const request = await openPairingRequestWith(frame, linkBox());
   if (!request || request.pairingSecret !== pending.secret) return false;
   state.pairing = null;
   savePhones([...listPhones().filter((p) => p.deviceId !== deviceId), { deviceId, name: request.phoneName, publicKey: request.phonePublicKey, pairedAtMs: state.now(), lastSeenMs: state.now() }]);
@@ -124,6 +167,10 @@ export async function removePhone(deviceId: string, deps: { relayUrl: string; au
   if (listPhones().length === 0) setPhoneAccess(false);
   const token = await deps.auth.idToken();
   if (!token) return;
+  if (!deps.fetchImpl && inDesktopApp()) {
+    await backendUnpair(deviceId, token, deps.relayUrl).catch(() => undefined);
+    return;
+  }
   await (deps.fetchImpl ?? fetch)(`${relayHttpBase(deps.relayUrl)}/pair/${encodeURIComponent(deviceId)}`, { method: 'DELETE', headers: { authorization: `Bearer ${token}` } }).catch(() => undefined);
 }
 
@@ -168,8 +215,7 @@ export function previewFits(chars: number, nowMs: number = state.now()): { ok: t
 async function sendTo(phone: PairedPhone, msg: PhoneMessage, type: 'to' | 'push' = 'to'): Promise<void> {
   const socket = state.socket;
   if (!socket) return;
-  const keys = await computerKeys();
-  const sealed = await encodeMessage(msg, { theirPublic: phone.publicKey, myPrivate: keys.privateKey });
+  const sealed = await encodeMessageWith(msg, linkBox(), phone.publicKey);
   countSent(sealed.length);
   socket.send(JSON.stringify(type === 'to' ? { type, deviceId: phone.deviceId, frame: sealed } : { type, deviceId: phone.deviceId, sealed }));
 }
@@ -177,8 +223,7 @@ async function sendTo(phone: PairedPhone, msg: PhoneMessage, type: 'to' | 'push'
 async function onFrame(deviceId: string, frame: string): Promise<void> {
   const phone = listPhones().find((p) => p.deviceId === deviceId);
   if (!phone) { await tryPairing(deviceId, frame); return; }
-  const keys = await computerKeys();
-  const msg = await decodeMessage(frame, { theirPublic: phone.publicKey, myPrivate: keys.privateKey });
+  const msg = await decodeMessageWith(frame, linkBox(), phone.publicKey);
   if (!msg || msg.kind !== 'call') return;
   const [handler] = [...state.handlers];
   if (!handler) { await sendTo(phone, { id: msg.id, kind: 'result', ok: false, error: 'Not available from the phone yet.' }); return; }
