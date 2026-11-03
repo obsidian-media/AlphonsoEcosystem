@@ -10,6 +10,7 @@ import { CONTENT_CALLS, mediaPreview } from './contentCalls';
 import { PHASE3_CALLS } from './phase3Calls';
 import { PHASE3B_CALLS } from './phase3bCalls';
 import type { PhoneCallName, PhoneMessage } from './phoneProtocol';
+import { PHONE_ENGINES, type PhoneEngine } from './phoneAnswer';
 
 export const NOT_FROM_PHONE = 'Not available from the phone yet.';
 export const ALREADY_DONE = 'Already done.';
@@ -61,6 +62,22 @@ export const PHONE_CALLS: Record<PhoneCallName, Call> = {
     seenMessages.set(messageId, answer);
     if (seenMessages.size > SEEN_LIMIT) seenMessages.delete(seenMessages.keys().next().value as string);
     return answer;
+  },
+  // Phase 4: a question the phone answered while the computer was off joins the phone conversation,
+  // once (by its id, so a copy sent again after a dropped link or a restart is kept once). Nothing runs.
+  'chat.phoneAnswered': async (args) => {
+    const messageId = str(args.messageId);
+    const question = str(args.question).trim().slice(0, 8000);
+    const answer = str(args.answer).trim().slice(0, 8000);
+    const answeredBy = str(args.answeredBy) as PhoneEngine;
+    if (!PHONE_ENGINES.includes(answeredBy)) throw new Error('Not a phone answer.');
+    if (!messageId || !question || !answer) throw new Error('Nothing to send.');
+    if (!listPhoneChat().some((m) => m.id === messageId)) {
+      const atMs = typeof args.atMs === 'number' && Number.isFinite(args.atMs) ? args.atMs : Date.now();
+      appendPhoneChat({ id: messageId, role: 'user', text: question, atMs });
+      appendPhoneChat({ id: `${messageId}-a`, role: 'assistant', text: answer, atMs, answeredBy });
+    }
+    return { messageId };
   },
   'request.approveStep': async (args) => {
     const requestId = str(args.requestId);

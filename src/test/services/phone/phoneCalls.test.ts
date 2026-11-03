@@ -26,6 +26,7 @@ vi.mock('../../../services/jose/joseInbound', () => h.inbound);
 vi.mock('../../../services/jose/joseRequestStore', () => ({ getJoseRequest: (id: string) => h.requests.get(id) || null }));
 
 import { ALREADY_DONE, NOT_FROM_PHONE, handlePhoneCall, resetPhoneCallsForTests } from '../../../services/phone/phoneCalls';
+import { PHONE_CHAT_KEY, listPhoneChat } from '../../../services/phone/phoneChatLog';
 
 const call = (name: string, args: unknown, id = Math.random().toString(36)) => ({ id, kind: 'call' as const, name: name as any, args });
 
@@ -86,5 +87,31 @@ describe('phoneCalls', () => {
     h.requests.set('r4', { id: 'r4', status: 'waiting_plan_approval', steps: [] });
     await handlePhoneCall(call('plan.cancel', { requestId: 'r4' }), 'ph-1');
     expect(h.submit.cancelPlan).toHaveBeenCalledWith('r4');
+  });
+
+  describe('chat.phoneAnswered (phase 4)', () => {
+    const args = { messageId: 'msg-p1', question: 'How many minutes is 2.5 hours?', answer: '150 minutes.', answeredBy: 'openrouter', atMs: 1000 };
+    beforeEach(() => localStorage.removeItem(PHONE_CHAT_KEY));
+
+    it('keeps the question and the answer with where it came from, without planning anything', async () => {
+      expect(await handlePhoneCall(call('chat.phoneAnswered', args), 'ph-1')).toEqual({ messageId: 'msg-p1' });
+      const chat = listPhoneChat();
+      expect(chat.map((m) => [m.id, m.role, m.text])).toEqual([['msg-p1', 'user', args.question], ['msg-p1-a', 'assistant', '150 minutes.']]);
+      expect(chat[1].answeredBy).toBe('openrouter');
+      expect(h.inbound.answerOrPlan).not.toHaveBeenCalled();
+    });
+
+    it('keeps a copy sent twice once, even after a restart', async () => {
+      await handlePhoneCall(call('chat.phoneAnswered', args), 'ph-1');
+      resetPhoneCallsForTests();
+      await handlePhoneCall(call('chat.phoneAnswered', args), 'ph-1');
+      expect(listPhoneChat()).toHaveLength(2);
+    });
+
+    it('refuses anything that is not a phone answer', async () => {
+      await expect(handlePhoneCall(call('chat.phoneAnswered', { ...args, answeredBy: 'claude' }), 'ph-1')).rejects.toThrow('Not a phone answer.');
+      await expect(handlePhoneCall(call('chat.phoneAnswered', { ...args, answer: ' ' }), 'ph-1')).rejects.toThrow('Nothing to send.');
+      expect(listPhoneChat()).toHaveLength(0);
+    });
   });
 });

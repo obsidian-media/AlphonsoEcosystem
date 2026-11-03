@@ -2,11 +2,13 @@
 // asked from the phone and what Alphonso answered. The phone shows it; the mirror sends
 // it. The last PHONE_CHAT_LIMIT messages are kept.
 import { randomId } from '../../lib/randomId';
+import type { PhoneEngine } from './phoneAnswer';
 
 export const PHONE_CHAT_KEY = 'alphonso_phone_chat_v1';
 export const PHONE_CHAT_LIMIT = 200;
 
-export interface PhoneChatMessage { id: string; role: 'user' | 'assistant'; text: string; atMs: number; requestId?: string }
+/** `answeredBy`: answered on the phone while the computer was off (phase 4). */
+export interface PhoneChatMessage { id: string; role: 'user' | 'assistant'; text: string; atMs: number; requestId?: string; answeredBy?: PhoneEngine }
 
 const listeners = new Set<() => void>();
 
@@ -18,7 +20,7 @@ export function listPhoneChat(): PhoneChatMessage[] {
 }
 
 export function appendPhoneChat(message: Omit<PhoneChatMessage, 'id' | 'atMs'> & { id?: string; atMs?: number }): PhoneChatMessage {
-  const full: PhoneChatMessage = { id: message.id || randomId('pc-msg'), atMs: message.atMs ?? Date.now(), role: message.role, text: message.text, ...(message.requestId ? { requestId: message.requestId } : {}) };
+  const full: PhoneChatMessage = { id: message.id || randomId('pc-msg'), atMs: message.atMs ?? Date.now(), role: message.role, text: message.text, ...(message.requestId ? { requestId: message.requestId } : {}), ...(message.answeredBy ? { answeredBy: message.answeredBy } : {}) };
   localStorage.setItem(PHONE_CHAT_KEY, JSON.stringify([...listPhoneChat(), full].slice(-PHONE_CHAT_LIMIT)));
   for (const listener of listeners) listener();
   return full;

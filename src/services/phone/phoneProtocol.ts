@@ -8,7 +8,7 @@ export const PHONE_MAX_FRAME_BYTES = 4 * 1024 * 1024;
 const PAIR_PREFIX = 'alphonso-pair:';
 
 /** What a phone may ask the computer to do (phoneCalls.ts maps each to the computer's own function). */
-export type PhoneCallName = 'chat.send' | 'request.approveStep' | 'request.rejectStep' | 'request.stop' | 'request.carryOn' | 'request.cancel' | 'plan.run' | 'plan.cancel' | 'mirror.snapshot'
+export type PhoneCallName = 'chat.send' | 'chat.phoneAnswered' | 'request.approveStep' | 'request.rejectStep' | 'request.stop' | 'request.carryOn' | 'request.cancel' | 'plan.run' | 'plan.cancel' | 'mirror.snapshot'
   | 'media.preview' | 'content.approveStep' | 'content.sendBack' | 'content.chooseVersion' | 'content.editPost'
   | 'content.movePost' | 'content.cancelPost' | 'content.approvePosts' | 'content.startProject'
   | 'request.sendBack' | 'request.editSendText'
