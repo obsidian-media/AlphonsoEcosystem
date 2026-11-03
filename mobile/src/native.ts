@@ -21,9 +21,19 @@ interface AlphonsoPhonePlugin {
   requestNotifications(): Promise<{ granted: boolean }>;
   pushToken(): Promise<{ token: string | null }>;
   takePendingActions(): Promise<{ actions: NotificationAction[] }>;
+  modelStatus(): Promise<{ available: boolean; reason: string | null }>;
+  modelAnswer(o: { system: string; prompt: string }): Promise<{ text: string; ms: number }>;
   addListener(event: 'notificationAction', fn: (a: NotificationAction) => void): Promise<PluginListenerHandle>;
 }
 const AlphonsoPhone = registerPlugin<AlphonsoPhonePlugin>('AlphonsoPhone');
+
+/** Apple's on-device model (phone phase 4 test round, spike/phone-phase4, throwaway). */
+export const phoneModel = {
+  status: async (): Promise<{ available: boolean; reason: string | null }> => {
+    try { return await AlphonsoPhone.modelStatus(); } catch { return { available: false, reason: 'notThisBuild' }; }
+  },
+  answer: (system: string, prompt: string): Promise<{ text: string; ms: number }> => AlphonsoPhone.modelAnswer({ system, prompt }),
+};
 
 export const secrets: PhoneSecrets = {
   get: async (key) => (await AlphonsoPhone.getSecret({ key })).value,

@@ -6,6 +6,9 @@ import Capacitor
 import FirebaseMessaging
 import LocalAuthentication
 import UserNotifications
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
 
 enum PhoneNotificationCategory {
     static let approve = "alphonso_approve"
@@ -34,6 +37,9 @@ public class AlphonsoPhonePlugin: CAPPlugin, CAPBridgedPlugin, NotificationHandl
         CAPPluginMethod(name: "requestNotifications", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "pushToken", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "takePendingActions", returnType: CAPPluginReturnPromise),
+        // Phone phase 4 test round (spike/phone-phase4, throwaway): Apple's on-device model.
+        CAPPluginMethod(name: "modelStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "modelAnswer", returnType: CAPPluginReturnPromise),
     ]
     private var pending: [[String: String]] = []
 
@@ -89,6 +95,56 @@ public class AlphonsoPhonePlugin: CAPPlugin, CAPBridgedPlugin, NotificationHandl
             self.pending = []
             call.resolve(["actions": actions])
         }
+    }
+
+    // MARK: Apple's on-device model (phone phase 4 test round, throwaway)
+
+    /// Whether Apple's model can be used here, and if not, why (iOS 26 and Apple Intelligence on).
+    @objc func modelStatus(_ call: CAPPluginCall) {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            switch SystemLanguageModel.default.availability {
+            case .available:
+                call.resolve(["available": true, "reason": NSNull()])
+            case .unavailable(let why):
+                let reason: String
+                switch why {
+                case .deviceNotEligible: reason = "deviceNotEligible"
+                case .appleIntelligenceNotEnabled: reason = "appleIntelligenceNotEnabled"
+                case .modelNotReady: reason = "modelNotReady"
+                @unknown default: reason = "unknown"
+                }
+                call.resolve(["available": false, "reason": reason])
+            @unknown default:
+                call.resolve(["available": false, "reason": "unknown"])
+            }
+            return
+        }
+        #endif
+        call.resolve(["available": false, "reason": "notIOS26"])
+    }
+
+    /// One answer from a fresh session, with how long it took. An error (a prompt too long for
+    /// the model's context, a guardrail) is passed back as the rejection's text.
+    @objc func modelAnswer(_ call: CAPPluginCall) {
+        let system = call.getString("system") ?? ""
+        guard let prompt = call.getString("prompt"), !prompt.isEmpty else { call.reject("No prompt."); return }
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            Task {
+                let started = Date()
+                do {
+                    let session = system.isEmpty ? LanguageModelSession() : LanguageModelSession(instructions: system)
+                    let response = try await session.respond(to: prompt)
+                    call.resolve(["text": response.content, "ms": Int(Date().timeIntervalSince(started) * 1000)])
+                } catch {
+                    call.reject(String(describing: error))
+                }
+            }
+            return
+        }
+        #endif
+        call.reject("Apple's model needs iOS 26.")
     }
 
     // MARK: NotificationHandlerProtocol (from Capacitor's router)
