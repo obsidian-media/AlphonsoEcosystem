@@ -283,7 +283,7 @@ pub(crate) async fn phone_sign_in(
     Ok(v) => v,
     Err(e) => return failed(e),
   };
-  if crate::os_keychain_store::secure_credential_set(REFRESH_KEY.to_string(), next).is_err() {
+  if crate::os_keychain_store::backend_set(REFRESH_KEY, &next).is_err() {
     return failed("This computer's keychain refused to keep the sign-in.");
   }
   let email = email_from_id_token(&id);
@@ -319,7 +319,7 @@ pub(crate) async fn phone_id_token(api_key: String) -> PhoneIdToken {
       };
     }
   }
-  let Some(stored) = crate::os_keychain_store::secure_credential_get(REFRESH_KEY.to_string())
+  let Some(stored) = crate::os_keychain_store::backend_get(REFRESH_KEY)
     .ok()
     .flatten()
   else {
@@ -334,7 +334,7 @@ pub(crate) async fn phone_id_token(api_key: String) -> PhoneIdToken {
   match refresh(api_key.trim(), &stored).await {
     Ok((id, next, secs)) => {
       if next != stored {
-        let _ = crate::os_keychain_store::secure_credential_set(REFRESH_KEY.to_string(), next);
+        let _ = crate::os_keychain_store::backend_set(REFRESH_KEY, &next);
       }
       let email = email_from_id_token(&id);
       keep(&id, email.clone(), secs);
@@ -357,7 +357,7 @@ pub(crate) fn phone_sign_out() -> Result<(), String> {
   if let Ok(mut c) = CACHE.lock() {
     *c = None;
   }
-  crate::os_keychain_store::secure_credential_delete(REFRESH_KEY.to_string())
+  crate::os_keychain_store::backend_delete(REFRESH_KEY)
 }
 
 #[cfg(test)]
