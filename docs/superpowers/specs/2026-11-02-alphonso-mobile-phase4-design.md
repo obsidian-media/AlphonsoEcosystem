@@ -1,6 +1,6 @@
 # Alphonso phone app, phase 4: the phone on its own
 
-**Status:** written 2026-11-02 from the owner's answers; waiting for the owner's approval.
+**Status:** approved by the owner 2026-11-02; build decisions added after the test round.
 Builds on `2026-10-31-alphonso-mobile-design.md` (section "Phase 4", approved 2026-10-31).
 Branch `feat/mobile-phase4`, its own PR on top of #377 (owner), merged after #377.
 
@@ -117,6 +117,21 @@ or not), and what building it would take.
 The owner picks which of the three to build; the earlier suggestion was cloud answering first, then
 the phone's model, then waking. That build gets its own plan (and, if the test round changes the
 picture, an update to this design first).
+
+## Build decisions (owner, 2026-11-02, after the test round)
+
+The test round (`docs/phone/phase4-test-round-report.md`) changed the picture, so the owner picked:
+
+- **What gets built:**
+  - Answering on the phone with Apple's model.
+  - OpenRouter free as the backup.
+  - Waking is not built.
+- **A plan goes to the computer whole.**
+  - When Jose on the phone decides a message needs a plan, the message waits for the computer, which plans and runs it as today: "This needs your computer. It will start when your computer is back."
+  - Nothing is half-done on the phone.
+  - This replaces the hand-over section above for phase 4. A message that sends, posts, publishes or changes a project always waits, because the phone's model answered two sends directly in the test round.
+- **Phone answers are copied to the computer.** Each question and answer joins the computer's phone conversation once, marked "Answered on this phone" or "Answered with OpenRouter (free)". Echo doesn't save decisions from them, just as he doesn't from the computer's own direct answers.
+- **"Remember …" waits for the computer's Echo.** The phone saves no decisions, so there is one decision store.
 
 ## Constraints
 
