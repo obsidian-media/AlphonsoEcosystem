@@ -4,14 +4,14 @@
 // writes spike-results/desktop.json (git-ignored).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { PHASE4_QUESTIONS, type SpikeAgent } from '../../mobile/spike/phase4Questions';
-import { redactKeys, summarize, type SpikeAnswer } from '../../mobile/spike/phase4Score';
+import { PHASE4_QUESTIONS } from '../../mobile/spike/phase4Questions';
+import { redactKeys, summarize } from '../../mobile/spike/phase4Score';
 import { STARTER_MODEL_TAG } from '../../services/setupFlowService';
 import { getConfiguredOllamaEndpoint } from '../../lib/ollama';
 
-const answers: SpikeAnswer[] = [];
+const answers = [];
 
-async function ask(system: string, prompt: string, json: boolean): Promise<{ text: string | null; ms: number; error: string | null }> {
+async function ask(system, prompt, json) {
   const started = Date.now();
   try {
     const messages = [...(system ? [{ role: 'system', content: system }] : []), { role: 'user', content: prompt }];
@@ -24,12 +24,12 @@ async function ask(system: string, prompt: string, json: boolean): Promise<{ tex
     if (!res.ok) return { text: null, ms: Date.now() - started, error: redactKeys(`HTTP ${res.status}: ${JSON.stringify(body).slice(0, 300)}`) };
     return { text: redactKeys(String(body?.message?.content ?? '')), ms: Date.now() - started, error: null };
   } catch (e) {
-    return { text: null, ms: Date.now() - started, error: redactKeys(String((e as Error)?.message || e)) };
+    return { text: null, ms: Date.now() - started, error: redactKeys(String(e?.message || e)) };
   }
 }
 
 describe.skipIf(!process.env.ALPHONSO_SPIKE_OLLAMA)('phase 4 desktop baseline', () => {
-  for (const agent of ['jose', 'alphonso', 'echo'] as SpikeAgent[]) {
+  for (const agent of ['jose', 'alphonso', 'echo']) {
     it(`asks ${agent}'s questions`, async () => {
       for (const q of PHASE4_QUESTIONS.filter((x) => x.agent === agent)) {
         const r = await ask(q.system, q.prompt, agent === 'jose');

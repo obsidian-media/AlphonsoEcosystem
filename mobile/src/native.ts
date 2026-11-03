@@ -2,7 +2,7 @@
 // sign-in (Firebase Authentication: Apple, Google, email link), secure storage and Face ID /
 // fingerprint and notifications (this app's own AlphonsoPhone plugin, mobile/ios and
 // mobile/android), and the QR scanner.
-import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+import { Capacitor, CapacitorHttp, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint } from '@capacitor/barcode-scanner';
@@ -33,6 +33,22 @@ export const phoneModel = {
     try { return await AlphonsoPhone.modelStatus(); } catch { return { available: false, reason: 'notThisBuild' }; }
   },
   answer: (system: string, prompt: string): Promise<{ text: string; ms: number }> => AlphonsoPhone.modelAnswer({ system, prompt }),
+};
+
+/** The phase 4 test round's two ways to call a cloud model: the web view's fetch and native HTTP. */
+type SpikeRequest = { url: string; method: 'GET' | 'POST'; headers: Record<string, string>; body?: unknown };
+export const spikeHttp = {
+  fetch: async (r: SpikeRequest) => {
+    const res = await fetch(r.url, { method: r.method, headers: r.headers, body: r.body === undefined ? undefined : JSON.stringify(r.body) });
+    const text = await res.text();
+    let data: unknown = text;
+    try { data = JSON.parse(text); } catch { /* keep the text */ }
+    return { status: res.status, data };
+  },
+  native: async (r: SpikeRequest) => {
+    const res = await CapacitorHttp.request({ url: r.url, method: r.method, headers: r.headers, data: r.body, connectTimeout: 30000, readTimeout: 120000 });
+    return { status: res.status, data: res.data };
+  },
 };
 
 export const secrets: PhoneSecrets = {
