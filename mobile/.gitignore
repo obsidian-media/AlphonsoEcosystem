@@ -1,0 +1,6 @@
+# Build outputs and per-build Firebase config (mobile/scripts/firebase-config.mjs)
+ios/App/App/GoogleService-Info.plist
+ios/App/firebase.xcconfig
+android/app/google-services.json
+# Made by XcodeGen from ios/App/project.yml
+ios/App/App.xcodeproj/

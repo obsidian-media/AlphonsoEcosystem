@@ -19,15 +19,15 @@ Find what you see, then try the fix. Most messages in Alphonso already say what 
 
 | You see | Fix |
 |---|---|
-| A plan card that does nothing | Bigger requests show their plan first. Press **Run this plan**, or change Settings → General → **Show Jose's plan first**. |
+| A plan card that does nothing | Bigger requests show their plan first. Press **Run this plan**, or change Settings → Approvals → **Show Jose's plan first**. |
 | "Waiting for you" | A step asks first. Approve it in Chat, on the Requests board (**Approve and carry on**) or on Telegram. |
-| An approval window keeps appearing | That's Approval Mode. Settings → General → **What asks first** chooses what asks; spending, sending and deleting always ask. |
+| An approval window keeps appearing | That's Approval Mode. Settings → Approvals → **What asks first** chooses what asks; spending, sending and deleting always ask. |
 | "Queued (2nd)." | Requests on your computer's model run one at a time; it starts when the one before finishes. |
 | "Waiting for memory: …" | Not enough RAM or graphics memory free yet. It starts when there is; Runtime Hub → Memory shows what's using it. |
 | A step "needs something set up" | It says what (a tool to install, a key to add). Do that, then **Carry on**. |
 | **Interrupted** | The app closed while it ran. **Carry on** keeps the finished steps. |
-| **Expired** | It waited longer than Settings → General → **Waiting requests expire after** (7 days). Ask again, or set 0 for never. |
-| A paid model is never used | Zero-Cost Mode is on, **Allow paid models** is off, its key isn't set up, or its prices aren't entered. Settings → General → Allow paid models says which. |
+| **Expired** | It waited longer than Settings → Approvals → **Waiting requests expire after** (7 days). Ask again, or set 0 for never. |
+| A paid model is never used | Zero-Cost Mode is on, **Allow paid models** is off, its key isn't set up, or its prices aren't entered. Settings → Approvals → Allow paid models says which. |
 | A Telegram button says "That button has expired." | It's over 7 days old or the request ended; open it on the board. |
 
 ## Pictures, video and sound
@@ -81,7 +81,7 @@ Find what you see, then try the fix. Most messages in Alphonso already say what 
 | A connector shows "setup required" | Settings → Connectors: enter the key and **Save**. You don't need environment variables. |
 | **Test** says "key found" but not "Live check passed" | Only the key was found; the service wasn't asked. A failing live check says what the service answered. |
 | "credentials are missing" | Add the key in Settings → Connectors. |
-| "action blocked by policy" | Zero-Cost Mode or Approval Mode stopped it; check Settings → General. |
+| "action blocked by policy" | Zero-Cost Mode or Approval Mode stopped it; check Settings → General (Zero-Cost Mode) and Settings → Approvals. |
 | "No outside tool can do this." | Add one in Settings → Connectors → Outside tools (MCP), and make sure it's signed in and switched on. |
 | "Paid servers are used only as their own step." | Agents only read from free servers; a Paid server's tools run as Marcus's step, with your approval. |
 | Telegram doesn't pair | Add your chat ID in Settings → Connectors → Telegram ("required to pair"), then send `/start`. |

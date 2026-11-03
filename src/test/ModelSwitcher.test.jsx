@@ -133,7 +133,7 @@ describe('OpenRouter in the picker (2026-10-30)', () => {
 });
 
 describe('ModelProviderPicker', () => {
-  // 2.11.0 QA (owner, 2026-11-01): an agent can use the paid model chosen in Settings → General (Allow paid models).
+  // 2.11.0 QA (owner, 2026-11-01): an agent can use the paid model chosen in Settings → Approvals (Allow paid models).
   it('offers a Paid tab only where it is asked for, showing the paid model and that it asks first', async () => {
     const { paidModelAvailable } = await import('../services/jose/joseSpend');
     const onProviderChange = vi.fn();
@@ -141,11 +141,11 @@ describe('ModelProviderPicker', () => {
     expect(screen.queryByText('Paid')).toBeNull();
     rerender(<ModelProviderPicker provider="paid" onProviderChange={onProviderChange} selectedModel="" onModelChange={() => {}} ollamaPicker={<div />} agentId="hector" allowPaid />);
     await waitFor(() => expect(screen.getByText('Paid').closest('button')).not.toBeDisabled());
-    expect(screen.getByTestId('paid-model-line').textContent).toBe('Claude · claude-sonnet-5. Each request asks first, with the cost. Change it in Settings → General (Allow paid models).');
+    expect(screen.getByTestId('paid-model-line').textContent).toBe('Claude · claude-sonnet-5. Each request asks first, with the cost. Change it in Settings → Approvals (Allow paid models).');
     vi.mocked(paidModelAvailable).mockReturnValue({ ok: false, reason: 'Zero-Cost Mode is on.' });
     rerender(<ModelProviderPicker provider="ollama" onProviderChange={onProviderChange} selectedModel="" onModelChange={() => {}} ollamaPicker={<div />} agentId="maria" allowPaid />);
     await waitFor(() => expect(screen.getByText('Paid').closest('button')).toBeDisabled());
-    expect(screen.getByText('Paid').closest('button')).toHaveAttribute('title', 'Zero-Cost Mode is on. Paid models are set up in Settings → General (Allow paid models).');
+    expect(screen.getByText('Paid').closest('button')).toHaveAttribute('title', 'Zero-Cost Mode is on. Paid models are set up in Settings → Approvals (Allow paid models).');
   });
 
   it('renders a tab for each provider', () => {

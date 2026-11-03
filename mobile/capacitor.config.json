@@ -1,0 +1,11 @@
+{
+  "appId": "com.alphonso.companion",
+  "appName": "Alphonso",
+  "webDir": "dist",
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["apple.com", "google.com"]
+    }
+  }
+}

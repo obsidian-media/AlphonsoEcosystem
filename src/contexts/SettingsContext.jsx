@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { getStorage, setStorage } from '../lib/appStorage';
+import { mergeSettings, SETTINGS_PATCH_EVENT } from '../services/settingsWriter';
 import { getDefaultWorkspaceRoot } from '../services/workspaceRootService';
 
 const SettingsContext = createContext(/** @type {any} */(null));
@@ -67,6 +68,17 @@ export function SettingsProvider({ children }) {
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  // A change made outside the Settings screen (the phone, phase 3 part B) joins this state, so the
+  // save above keeps it instead of writing the older value back.
+  useEffect(() => {
+    const onPatch = (event) => {
+      const patch = event?.detail;
+      if (patch && typeof patch === 'object') setSettingsRaw((current) => mergeSettings(current, patch));
+    };
+    window.addEventListener(SETTINGS_PATCH_EVENT, onPatch);
+    return () => window.removeEventListener(SETTINGS_PATCH_EVENT, onPatch);
   }, []);
 
   const setSettings = useCallback((valueOrUpdater) => {

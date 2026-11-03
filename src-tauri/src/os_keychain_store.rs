@@ -35,34 +35,42 @@ fn open_entry(key: &str) -> Result<Entry, String> {
   Entry::new(&service_name(), &account_name(key)).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
-pub fn secure_credential_set(key: String, value: String) -> Result<(), String> {
+/// Secrets only the backend reads (2026-11-03): the window's commands below refuse them.
+/// The phone sign-in's refresh token and this computer's phone private key.
+const BACKEND_ONLY: [&str; 2] = [
+  crate::phone_signin::REFRESH_KEY,
+  crate::phone_box::PRIVATE_KEY_SLOT,
+];
+pub(crate) const BACKEND_ONLY_REFUSED: &str = "That secret is kept by the app itself.";
+
+pub(crate) fn is_backend_only(key: &str) -> bool {
+  BACKEND_ONLY.contains(&account_name(key).as_str())
+}
+
+/// For backend code: any key, including the backend-only ones.
+pub(crate) fn backend_set(key: &str, value: &str) -> Result<(), String> {
   if key.trim().is_empty() {
     return Err("secure_credential_set: key must not be empty".to_string());
   }
-  let entry = open_entry(&key)?;
-  entry.set_password(&value).map_err(|e| e.to_string())
+  open_entry(key)?.set_password(value).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
-pub fn secure_credential_get(key: String) -> Result<Option<String>, String> {
+pub(crate) fn backend_get(key: &str) -> Result<Option<String>, String> {
   if key.trim().is_empty() {
     return Ok(None);
   }
-  let entry = open_entry(&key)?;
-  match entry.get_password() {
+  match open_entry(key)?.get_password() {
     Ok(value) => Ok(Some(value)),
     Err(keyring::Error::NoEntry) => Ok(None),
     Err(e) => Err(e.to_string()),
   }
 }
 
-#[tauri::command]
-pub fn secure_credential_delete(key: String) -> Result<(), String> {
+pub(crate) fn backend_delete(key: &str) -> Result<(), String> {
   if key.trim().is_empty() {
     return Ok(());
   }
-  let entry = open_entry(&key)?;
+  let entry = open_entry(key)?;
   match entry.delete_credential() {
     Ok(()) => Ok(()),
     // Idempotent: deleting something already absent is not an error —
@@ -70,6 +78,30 @@ pub fn secure_credential_delete(key: String) -> Result<(), String> {
     Err(keyring::Error::NoEntry) => Ok(()),
     Err(e) => Err(e.to_string()),
   }
+}
+
+#[tauri::command]
+pub fn secure_credential_set(key: String, value: String) -> Result<(), String> {
+  if is_backend_only(&key) {
+    return Err(BACKEND_ONLY_REFUSED.to_string());
+  }
+  backend_set(&key, &value)
+}
+
+#[tauri::command]
+pub fn secure_credential_get(key: String) -> Result<Option<String>, String> {
+  if is_backend_only(&key) {
+    return Err(BACKEND_ONLY_REFUSED.to_string());
+  }
+  backend_get(&key)
+}
+
+#[tauri::command]
+pub fn secure_credential_delete(key: String) -> Result<(), String> {
+  if is_backend_only(&key) {
+    return Err(BACKEND_ONLY_REFUSED.to_string());
+  }
+  backend_delete(&key)
 }
 
 #[cfg(test)]
@@ -105,6 +137,20 @@ mod tests {
     // whatever error an empty-account Entry::new would produce.
     let result = secure_credential_get(String::new());
     assert_eq!(result, Ok(None));
+  }
+
+  const REFRESH: &str = crate::phone_signin::REFRESH_KEY;
+  const SLOT: &str = crate::phone_box::PRIVATE_KEY_SLOT;
+
+  #[test]
+  fn the_window_cannot_read_or_change_backend_only_secrets() {
+    let refused = Err(BACKEND_ONLY_REFUSED.to_string());
+    for key in [REFRESH, SLOT, " alphonso_phone_link_private_key "] {
+      assert_eq!(secure_credential_get(key.to_string()), refused.clone().map(|()| None));
+      assert_eq!(secure_credential_set(key.to_string(), "x".to_string()), refused);
+      assert_eq!(secure_credential_delete(key.to_string()), refused);
+    }
+    assert!(!is_backend_only("connector_credentials_v1"));
   }
 
   #[test]

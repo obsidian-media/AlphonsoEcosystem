@@ -55,7 +55,7 @@ You can drop files onto Chat, use the microphone (see [Voice](#12-voice)), and a
 
 **Jose** plans every request that isn't a plain question. A plan is a set of steps; each names its agent, what it does and which steps it waits for. Steps that don't wait for each other run at the same time. Jose starts from a template when one fits (Content video, Build an app, Research report, or one you saved) or plans fresh.
 
-**Show Jose's plan first** (Settings → General): Always, Bigger requests only (the default: 4 or more agents, or a step that always asks) or Never. A waiting plan shows as a card in Chat with **Run this plan**, **Edit on the board** and **Cancel**.
+**Show Jose's plan first** (Settings → Approvals): Always, Bigger requests only (the default: 4 or more agents, or a step that always asks) or Never. A waiting plan shows as a card in Chat with **Run this plan**, **Edit on the board** and **Cancel**.
 
 ### The Requests board
 
@@ -77,13 +77,13 @@ Requests that use the model on your computer run one at a time ("Queued (2nd).")
 - **When a tool isn't set up** (Kokoro not installed, a connector without its key), the step waits and says what to set up; **Carry on** tries again.
 - **When memory is short**, a step waits and says what it's waiting for (see [section 11](#11-your-computer-models-tools-and-memory)).
 
-A request ends with a short summary, one line per step. A waiting request expires after 7 days (Settings → General → **Waiting requests expire after**; 0 means never).
+A request ends with a short summary, one line per step. A waiting request expires after 7 days (Settings → Approvals → **Waiting requests expire after**; 0 means never).
 
 ---
 
 ## 4. What asks first
 
-Approval follows from what a step does, not from the words in your request. **Settings → General → What asks first** has a switch for each kind:
+Approval follows from what a step does, not from the words in your request. **Settings → Approvals → What asks first** has a switch for each kind:
 
 | A step that… | Asks first |
 |---|---|
@@ -103,7 +103,7 @@ You can approve in Chat, on the Requests board, on Telegram (with the buttons Jo
 
 **Zero-Cost Mode** (on by default) blocks every paid service: Claude, ChatGPT, Qwen, Runway, ElevenLabs, Higgsfield, CALL-E, WhatsApp (Meta charges for conversations), paid OpenRouter models and outside tools you marked Paid.
 
-To let a step use a paid model, turn Zero-Cost Mode off and switch on **Settings → General → Allow paid models**: choose Claude, ChatGPT or OpenRouter, enter the prices (OpenRouter fills them in) and a monthly cap. A step that still fails on your own models may then be given to the paid model, after asking with the cost. Prices for Runway, ElevenLabs and Higgsfield are entered in the same place.
+To let a step use a paid model, turn Zero-Cost Mode off and switch on **Settings → Approvals → Allow paid models**: choose Claude, ChatGPT or OpenRouter, enter the prices (OpenRouter fills them in) and a monthly cap. A step that still fails on your own models may then be given to the paid model, after asking with the cost. Prices for Runway, ElevenLabs and Higgsfield are entered in the same place.
 
 ---
 
@@ -252,7 +252,7 @@ Each agent works from skills, one per kind of job (Hector's "Web research with s
 
 Everything is set up in **Settings → Connectors**, grouped into Messaging, AI Models, Search & Research, Content & Productivity, and Automation. Enter the key, **Save**, then **Test**: "Live check passed" means the service answered; "key found" means only that a key is saved. Keys are kept in your system's keychain. Step-by-step setup for each service is in [Connectors](CONNECTORS.md).
 
-- **OpenRouter:** free models for Chat and any agent; the picker shows the free requests left today. When they run out, a step carries on with this computer's model, or asks to use a paid one if you chose that (Settings → General → **When OpenRouter's free limit runs out**).
+- **OpenRouter:** free models for Chat and any agent; the picker shows the free requests left today. When they run out, a step carries on with this computer's model, or asks to use a paid one if you chose that (Settings → Approvals → **When OpenRouter's free limit runs out**).
 - **Outside tools (MCP):** connect your own online services, such as your shop or issue tracker. Mark each server Free or Paid; every tool asks first until you mark it **Reading only**. Agents read from reading-only tools; changes are Marcus's step and show the exact call.
 - **Hermes profiles:** install Hermes Agent in Runtime Hub, then **Agent Providers → Hermes profiles** sets up a profile for an agent, which then uses Hermes's own tools. Hermes asks you before it runs a command or changes something.
 - **Agent Providers:** each agent can use a different model or provider.
@@ -266,7 +266,8 @@ Everything is set up in **Settings → Connectors**, grouped into Messaging, AI 
 **Memory.** Before each step, Alphonso checks free RAM and graphics memory. If the step fits, it runs; if not, idle models and idle tools Alphonso started are freed to make room, or the step waits and says why. **Runtime Hub → Memory** (or the meter in the top bar) shows what's loaded, who started it and what's waiting, and how long each tool may sit idle before it stops (ComfyUI: 15 minutes). Programs you started yourself are never stopped.
 
 Settings worth knowing:
-- **Settings → General:** the Ollama address and model (and **Download a model**: type a name from Ollama's model library and press Download), Approval Mode, What asks first, Allow paid models, Show Jose's plan first, Developer mode.
+- **Settings → General:** the Ollama address and model (and **Download a model**: type a name from Ollama's model library and press Download), Zero-Cost Mode, Developer mode.
+- **Settings → Approvals:** Approval Mode, What asks first, Allow paid models, when OpenRouter's free limit runs out, Jose on Telegram, how long waiting requests last, Show Jose's plan first.
 - **Settings → Runtime:** the output folder, the ComfyUI install to use, phone pairing.
 - **Settings → Agents:** Alphonso's projects, when agents call their own tools (by model size).
 - **Settings → Logs** and **Settings → Backup:** the crash log, and exporting or restoring your data (keys are never exported).
@@ -298,9 +299,9 @@ Install **Voice OS** in Runtime Hub, start it from **System → Voice**, then cl
 | `/pause`, `/resume` | Pause or resume notifications |
 | `/help` | The full list |
 
-Jose tells you on Telegram when a step or plan waits for you (with **Approve** / **Reject** buttons), when a request finishes or fails, and when Miya Studio has results or ideas. Settings → General → **Jose on Telegram** chooses which.
+Jose tells you on Telegram when a step or plan waits for you (with **Approve** / **Reject** buttons), when a request finishes or fails, and when Miya Studio has results or ideas. Settings → Approvals → **Jose on Telegram** chooses which.
 
-**WhatsApp** works the same way through Meta's Cloud API (see [Connectors](CONNECTORS.md)). **The iPhone app** pairs in Settings → Runtime → **Remote Access** (turn on mobile pairing, then scan the code).
+**WhatsApp** works the same way through Meta's Cloud API (see [Connectors](CONNECTORS.md)). **The Alphonso phone app** (iPhone and Android, in testing) pairs in Settings → Runtime → Remote Access → **Phones**: sign in, choose **Pair a phone**, and scan the code (or copy it and paste it in the app). From the phone you can chat, see the Requests board and read each step's work, approve or reject a waiting step, send writing back with a reason or edit a send's text, and Stop, Carry on or Cancel a request; check Miya Studio's projects (watch videos, see pictures, approve reviews, edit captions, approve and schedule posts, start a project) and move or cancel posts on the Calendar; notifications tell you when something waits for you or new pictures or a video are ready to check. A step that spends, sends or deletes is approved only inside the app, after Face ID or your fingerprint. See [PHONE.md](PHONE.md).
 
 ---
 

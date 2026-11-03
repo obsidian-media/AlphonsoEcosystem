@@ -1,0 +1,15 @@
+{
+  "note": "Made by scripts/phone-box-vectors.mjs with libsodium; A seals to B. The sealed box changes each run (its key is random).",
+  "a": {
+    "publicKey": "GxtY3VDqFLYNoXt5DNAnVNlwybq4ZOuzwPMBb-UdP1c",
+    "privateKey": "XOhu-3X6TixBD0bhben2rK4aFwNShlG2m8F2wIi-8-4"
+  },
+  "b": {
+    "publicKey": "YDRufJEaX2uhVBKRdMr-dbKUrDu9VUljL0jOxiZvhBA",
+    "privateKey": "qjxia8nDjIwgGHjrsdWwtQrEDomGx4eT2x1O82n8oc4"
+  },
+  "nonce": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYX",
+  "message": "Hello from the phone: {\"kind\":\"call\",\"id\":\"c1\"} é",
+  "framed": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYX-zrpC4VEUqboMEWBTA8fR4sdsc4zQcqQr8rzChbZPL9y1FupeWtIBfNI_nrid35ku2aEJfDUsJaQwoODuzpWWpUo",
+  "sealedToB": "W_AWUHqdJLsmbfat44EaoHuNwWEVsBBiHoKyCKKrcSPQ2klaScmjLi6ySCuHMZpZGpbwnoOIs24rKT0btVo8TgvLLjFrL3ZHcXt6DuJJioJYMCBYxNGjvFQ0LAACf5T8keU"
+}

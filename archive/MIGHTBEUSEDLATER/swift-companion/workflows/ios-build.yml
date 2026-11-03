@@ -1,0 +1,59 @@
+name: iOS CI and Release
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-build.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-build.yml'
+  workflow_dispatch: {}
+
+# The old Swift companion's tests only. Its TestFlight upload was removed on 2026-11-01:
+# the phone app (mobile/) now uploads under the same app ID through
+# phone-app-testflight.yml (owner's choice).
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Native iOS tests
+    runs-on: macos-15
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Select Xcode 26
+        run: |
+          # Use latest available Xcode (26+) required for iOS 26 SDK.
+          XCODE=$(ls /Applications | grep "^Xcode_2[6-9]" | sort -V | tail -1 || ls /Applications | grep "^Xcode" | sort -V | tail -1)
+          echo "Using: $XCODE"
+          sudo xcode-select -s "/Applications/$XCODE/Contents/Developer"
+          xcodebuild -version
+
+      - name: Run AlphonsoCompanionTests
+        working-directory: ios/AlphonsoCompanion
+        run: |
+          set -e
+          UDID=$(xcrun simctl list devices available | grep -m1 "iPhone" | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
+          if [ -z "$UDID" ]; then
+            echo "::error::No available iPhone simulator found on this runner"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Testing against simulator UDID: $UDID"
+
+          xcodebuild test \
+            -project AlphonsoCompanion.xcodeproj \
+            -scheme AlphonsoCompanion \
+            -destination "platform=iOS Simulator,id=$UDID" \
+            CODE_SIGNING_ALLOWED=NO

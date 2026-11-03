@@ -50,14 +50,6 @@ ignore = [
   "RUSTSEC-2025-0081", # unic-char-property
   "RUSTSEC-2025-0098", # unic-ucd-version
   "RUSTSEC-2025-0100", # unic-ucd-ident
-  # zip 4.6.1 (added 2026-10-20) - tauri-plugin-updater 2.14.0 still requires
-  # zip ^4, so zip 9 cannot be selected until that plugin changes. The
-  # updater verifies the Minisign signature over the complete download before
-  # it extracts or installs it, which is the compensating control. Recheck by
-  # 2026-11-20.
-  "RUSTSEC-2026-0367", # zip
-  "RUSTSEC-2026-0368", # zip
-  "RUSTSEC-2026-0369", # zip
   # zbus/zvariant (added 2026-10-20) - unmaintained Linux notification and
   # opener transitive crates, not exploitable findings. Recheck by 2026-11-20.
   "RUSTSEC-2026-0370", # zvariant

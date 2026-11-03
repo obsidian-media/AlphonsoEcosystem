@@ -2,7 +2,7 @@
 // the files it wrote, its sources, and its structured result as text. Shown
 // on the Requests board when you pick a step in the map.
 import React, { useMemo, useState } from 'react';
-import { getStepOutput } from '../../services/jose/joseStepOutputs';
+import { useBoardData } from '../../services/phone/boardData';
 import { openSourceLink } from '../../services/browserAutomationService';
 import { ResearchFindings } from '../hector/ResearchFindings';
 import { toReadableText } from '../../lib/readableValue';
@@ -16,7 +16,8 @@ function fileName(path: string): string {
 
 export function JoseStepOutput({ commandId, stepId }: { commandId: string; stepId: string }) {
   const [showAll, setShowAll] = useState(false);
-  const output: any = useMemo(() => getStepOutput(commandId, stepId), [commandId, stepId]);
+  const data = useBoardData();
+  const output: any = useMemo(() => data.stepOutput(commandId, stepId), [data, commandId, stepId]);
   if (!output) {
     return <p className="text-xs text-(--text-3)">Nothing was saved for this step.</p>;
   }

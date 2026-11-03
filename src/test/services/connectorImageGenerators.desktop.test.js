@@ -88,6 +88,49 @@ describe('connectorImageGenerators in the desktop app', () => {
     expect(freeOllamaGpuMemory.mock.invocationCallOrder[0]).toBeLessThan(mockInvoke.mock.invocationCallOrder[promptCall]);
   });
 
+  // Owner, 2026-11-02: "the same dog" starts from the earlier picture, so the dog stays the dog.
+  it('starts from a given picture: loaded, encoded, and only partly redrawn', async () => {
+    const { generateComfyUiImage } = await import('../../services/connectors/connectorImageGenerators');
+    await generateComfyUiImage({ prompt: 'a beagle in a pirate costume', startImage: 'alphonso-picture-1.png', denoise: 0.6 });
+    const workflow = JSON.parse(mockInvoke.mock.calls.find(([, args]) => args.path === '/prompt')[1].body).prompt;
+    const nodes = Object.values(workflow);
+    expect(nodes.find((n) => n.class_type === 'LoadImage').inputs.image).toBe('alphonso-picture-1.png');
+    expect(nodes.some((n) => n.class_type === 'EmptyLatentImage')).toBe(false);
+    const encode = Object.entries(workflow).find(([, n]) => n.class_type === 'VAEEncode');
+    const sampler = nodes.find((n) => n.class_type === 'KSampler');
+    expect(sampler.inputs.latent_image).toEqual([encode[0], 0]);
+    expect(sampler.inputs.denoise).toBe(0.6);
+  });
+
+  // Owner, 2026-11-02: a picture model from Runtime Hub draws with its own settings and size.
+  it('draws with the chosen picture model\'s own settings', async () => {
+    const base = mockInvoke.getMockImplementation();
+    mockInvoke.mockImplementation(async (command, args) => (args.path === '/object_info/CheckpointLoaderSimple'
+      ? { status: 200, body: JSON.stringify({ CheckpointLoaderSimple: { input: { required: { ckpt_name: [['DreamShaper_8_pruned.safetensors', 'sdxl_lightning_4step.safetensors']] } } } }), bodyBase64: null }
+      : base(command, args)));
+    localStorage.setItem('alphonso_comfyui_checkpoint_v1', 'sdxl_lightning_4step.safetensors');
+    try {
+      const { generateComfyUiImage } = await import('../../services/connectors/connectorImageGenerators');
+      const result = await generateComfyUiImage({ prompt: 'a lighthouse', width: 512, height: 512, steps: 20, cfgScale: 7 });
+      const workflow = JSON.parse(mockInvoke.mock.calls.find(([, args]) => args.path === '/prompt')[1].body).prompt;
+      const nodes = Object.values(workflow);
+      expect(nodes.find((n) => n.class_type === 'KSampler').inputs).toMatchObject({ steps: 4, cfg: 1, sampler_name: 'euler', scheduler: 'sgm_uniform' });
+      expect(nodes.find((n) => n.class_type === 'EmptyLatentImage').inputs).toMatchObject({ width: 1024, height: 1024 });
+      expect(result).toMatchObject({ checkpoint: 'sdxl_lightning_4step.safetensors', width: 1024, height: 1024 });
+    } finally {
+      localStorage.removeItem('alphonso_comfyui_checkpoint_v1');
+    }
+  });
+
+  it('without a starting picture it draws from nothing, fully', async () => {
+    const { generateComfyUiImage } = await import('../../services/connectors/connectorImageGenerators');
+    await generateComfyUiImage({ prompt: 'a lighthouse' });
+    const workflow = JSON.parse(mockInvoke.mock.calls.find(([, args]) => args.path === '/prompt')[1].body).prompt;
+    const nodes = Object.values(workflow);
+    expect(nodes.some((n) => n.class_type === 'LoadImage')).toBe(false);
+    expect(nodes.find((n) => n.class_type === 'KSampler').inputs.denoise).toBe(1);
+  });
+
   it('reports a ComfyUI refusal instead of succeeding', async () => {
     mockInvoke.mockImplementation(async (command, args) =>
       args.path === '/prompt'

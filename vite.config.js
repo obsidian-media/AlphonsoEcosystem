@@ -54,6 +54,9 @@ export default defineConfig({
           // main eagerly-loaded bundle and pushed it over the 2MB CI cap.
           // Giving them their own chunk keeps them out of the initial load.
           if (id.includes('jspdf') || id.includes('pptxgenjs') || id.includes('jszip') || id.includes('image-size')) return 'export-libs';
+          // libsodium (phone access's encryption, src/services/phone/phoneCrypto.ts) carries its
+          // WebAssembly inline; in 'vendor' it pushed that chunk past the 2MB cap.
+          if (id.includes('libsodium')) return 'crypto-libs';
           return 'vendor';
         }
       }

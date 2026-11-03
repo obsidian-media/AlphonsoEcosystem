@@ -1,0 +1,16 @@
+{
+  "name": "alphonso-signin-page",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The Alphonso sign-in page on Firebase Hosting: the computer's sign-in for phone access.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test src/handoff.test.mjs",
+    "config": "node scripts/firebase-web-config.mjs",
+    "build": "vite build --config vite.config.mjs",
+    "deploy": "node scripts/deploy.mjs"
+  },
+  "dependencies": {
+    "firebase": "12.19.0"
+  }
+}

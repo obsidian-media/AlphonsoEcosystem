@@ -156,3 +156,25 @@ as new work requiring its own review, not a revert.
 - **Kept:** `workflowBuilderService.ts`, `workflowOperationsRegistryService.ts` and
   `workflowExecutionService.js` (older code reads them; see DEFERRED_WORK 2026-11-01).
 - **Before restoring:** every step must be an agent step run through Jose.
+
+## companion-lan/ (archived 2026-11-02, phone app phase 3 part C, owner approved)
+
+The desktop's local-network server for the older iPhone app (Swift, `ios/AlphonsoCompanion/`): a
+WebSocket on port 8765 with a 6-digit PIN and mDNS discovery (`companion_*.rs`), the Settings pairing
+panel (`CompanionPairingPanel.tsx`), the command handler it fed (`companionCommandService.ts` and
+App's `companion://*` listeners), and their tests. **Why:** the new phone app does everything through
+the sealed relay; a PIN over the local network was a second, weaker way into the computer that nothing
+used. **Before bringing it back:** it would need its own security review (the PIN, the open port), the
+crates `mdns-sd`, `tokio-tungstenite` and `hostname` back in `Cargo.toml`, its `lib.rs` setup and
+commands, and a client: the Swift app is archived too (`swift-companion/`).
+
+## swift-companion/ (archived 2026-11-02, phone app phase 3 part C, owner approved)
+
+The older iPhone app (`ios/AlphonsoCompanion/`, SwiftUI, about 11,000 lines, with its Atlas cloud
+preview and tests), its build workflow (`ios-build.yml`) and `install-ios.sh`, the CI job that built
+it, and Atlas's design docs (`docs/platform/atlas-*`). **Why:** the phone app in `mobile/` does
+everything it did through the sealed relay, and keeps its app ID `com.alphonso.companion`; the old app
+was on TestFlight only. **Not archived:** Atlas's switched-off routes inside Cloud Voice
+(`voice/cloud-backend/app/atlas_*.py`) and their Supabase migration and test, because changing Cloud
+Voice redeploys a live service (owner, 2026-11-02; see DEFERRED_WORK). **Before bringing it back:** it
+talked to the desktop's local-network server, archived in `companion-lan/`.

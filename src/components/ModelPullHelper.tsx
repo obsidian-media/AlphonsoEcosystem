@@ -7,7 +7,7 @@ import { openExternalUrl } from '../services/browserAutomationService';
 const OLLAMA_LIBRARY_URL = 'https://ollama.com/library';
 
 /**
- * Settings → General: download a model by name, inside the app, with progress.
+ * Settings → General → Ollama Runtime: download a model by name, inside the app, with progress.
  * Until 2026-10-31 this offered a fixed list of old model names and asked you to
  * paste an `ollama pull` command into a terminal.
  */

@@ -53,6 +53,7 @@ vi.mock('../services/agentWorkshop/accBridgeService', () => ({
 vi.mock('../services/comfyuiSettingsService', () => ({
   resolveComfyuiDirectory: vi.fn().mockResolvedValue(''),
   resolveComfyuiPython: vi.fn().mockResolvedValue(''),
+  findComfyuiInstalls: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../services/memoryService', () => ({
@@ -119,8 +120,9 @@ vi.mock('../components/CrashLogView', () => ({
   CrashLogView: () => <div data-testid="crash-log">Crashes</div>,
 }));
 
-vi.mock('../components/CompanionPairingPanel', () => ({
-  CompanionPairingPanel: () => <div data-testid="companion-pairing">Pairing</div>,
+
+vi.mock('../components/phone/PhonesSection', () => ({
+  PhonesSection: () => <div data-testid="phones-section">Phones</div>,
 }));
 
 vi.mock('../components/ConnectorSetupPanel', () => ({
@@ -191,6 +193,15 @@ describe('SettingsView smoke', () => {
     expect(invoke).toHaveBeenCalledWith('open_url', { url: 'https://ffmpeg.org/legal.html' });
   });
 
+  // Phone phase 3 part C (owner, 2026-11-02): the older iPhone app and its PIN pairing retired.
+  it('Remote Access has only the phone app pairing', () => {
+    render(<SettingsView settings={minimalSettings} setSettings={vi.fn()} ollamaStatus={{ state: 'running', label: 'Running' }} installedModels={[]} onCheckOllama={vi.fn()} onCopyTroubleshootingCommand={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Runtime/ }));
+    expect(screen.getByTestId('phones-section')).toBeTruthy();
+    expect(screen.queryByTestId('older-phone-app')).toBeNull();
+    expect(screen.queryByText(/PIN pairing/)).toBeNull();
+  });
+
   it('renders with empty settings', () => {
     render(
       <SettingsView
@@ -249,7 +260,7 @@ describe('SettingsView smoke', () => {
     expect(setDeveloperMode).toHaveBeenCalledWith(true);
   });
 
-  // Settings → Approvals: one switch per kind of action (Jose redesign, 2026-10-23).
+  // Settings → Approvals (its own page since phone phase 3 part B, 2026-11-02): one switch per kind of action.
   function renderApprovals(settings, setSettings = vi.fn()) {
     render(
       <SettingsView
@@ -262,8 +273,21 @@ describe('SettingsView smoke', () => {
         copyState=""
       />
     );
+    fireEvent.click(screen.getByRole('button', { name: /^Approvals$/ }));
     return setSettings;
   }
+
+  it('the Approvals page has everything about asking and spending; General has none of it', () => {
+    render(<SettingsView settings={minimalSettings} setSettings={vi.fn()} ollamaStatus={{ state: 'running', label: 'Running' }} installedModels={[]} onCheckOllama={vi.fn()} onCopyTroubleshootingCommand={vi.fn()} />);
+    expect(screen.queryByRole('switch', { name: 'Toggle approval mode' })).toBeNull();
+    expect(screen.queryByLabelText('Waiting requests expire after (days)')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Approvals$/ }));
+    expect(screen.getByRole('switch', { name: 'Toggle approval mode' })).toBeTruthy();
+    expect(screen.getByRole('switch', { name: 'Ask before: Read and analyse' })).toBeTruthy();
+    expect(screen.getByLabelText('Waiting requests expire after (days)')).toBeTruthy();
+    expect(screen.getByLabelText("When OpenRouter's free limit runs out")).toBeTruthy();
+    expect(screen.getByLabelText("Show Jose's plan first")).toBeTruthy();
+  });
 
   // The policy treats an unset Approval Mode as on; the switch must say so (2026-10-23).
   it("saves when Jose shows his plan first", () => {

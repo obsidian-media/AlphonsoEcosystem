@@ -63,8 +63,8 @@ Both send your messages to that company's cloud. Use them on Chat's model tabs, 
 
 ### OpenRouter
 One **API Key** (openrouter.ai/settings/keys) for OpenRouter's free models, and its paid models if you allow them.
-- **Free models:** pick one on Chat's OpenRouter tab or for an agent, or "Let OpenRouter choose a free model". The picker shows the free requests left today: 50 a day until you've bought $10 of OpenRouter credit, 1,000 after that, and 20 a minute. When they run out, a step carries on with this computer's model (or asks to use a paid one, if you chose that in Settings → General). Some free models are run by companies that may keep what you send.
-- **Paid models:** Settings → General → **Allow paid models** → OpenRouter → a model; its prices fill in from OpenRouter. Every paid step asks first with the cost.
+- **Free models:** pick one on Chat's OpenRouter tab or for an agent, or "Let OpenRouter choose a free model". The picker shows the free requests left today: 50 a day until you've bought $10 of OpenRouter credit, 1,000 after that, and 20 a minute. When they run out, a step carries on with this computer's model (or asks to use a paid one, if you chose that in Settings → Approvals). Some free models are run by companies that may keep what you send.
+- **Paid models:** Settings → Approvals → **Allow paid models** → OpenRouter → a model; its prices fill in from OpenRouter. Every paid step asks first with the cost.
 - **Your own provider keys:** keys added in OpenRouter (Gemini, Anthropic, OpenAI, Mistral) work through your one OpenRouter key.
 
 ### Claude, ChatGPT, Qwen, DeepSeek (paid)
@@ -125,10 +125,10 @@ Free stock clips for Miya Studio's scenes. A free **API Key** from pexels.com/ap
 Set up in Settings → Runtime → ComfyUI: choose your install (or **Search this computer**), its address and the image model. Runtime Hub installs ComfyUI with a starter image model, and on its card the video models, the character model and motion transfer.
 
 ### Runway (paid)
-AI clips. An **API Secret** from runwayml.com (Account → API). Enter your price per second in Settings → General → **Allow paid models**; each run asks once with the estimate.
+AI clips. An **API Secret** from runwayml.com (Account → API). Enter your price per second in Settings → Approvals → **Allow paid models**; each run asks once with the estimate.
 
 ### ElevenLabs (paid)
-Voice-overs in your own ElevenLabs voices (clones too) and sound effects. An **API Key**; **Test** lists your voices. Enter your prices in Settings → General → **Allow paid models**.
+Voice-overs in your own ElevenLabs voices (clones too) and sound effects. An **API Key**; **Test** lists your voices. Enter your prices in Settings → Approvals → **Allow paid models**.
 
 ### Higgsfield (paid)
 Pictures, AI clips, character training and motion for Miya Studio, and "Make a Higgsfield picture (or video) of …" from Chat or Telegram. Enter your **Key id** and **Key secret**, and paste each model id from the Higgsfield Console (picture, clip, character training, motion), with optional extra settings as JSON. **Test** shows Higgsfield's estimate without making anything. Everything asks first with the cost.

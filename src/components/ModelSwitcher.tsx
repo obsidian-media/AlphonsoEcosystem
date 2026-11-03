@@ -3,6 +3,7 @@ import { ChevronDown, Cpu } from 'lucide-react';
 import { fetchOllamaModels, getConfiguredOllamaEndpoint, isChatModel, pullOllamaModel } from '../lib/ollama';
 import type { OpenRouterModel } from '../services/connectors/openRouterConnector';
 import type { FreeModelChoice } from '../services/connectors/openRouterModels';
+import { AGENT_PROVIDER_LABELS } from '../services/providerLabels';
 
 const STORAGE_KEY = 'alphonso_selected_model_v1';
 // Computed per-call, not module-scoped constants — the configured endpoint
@@ -356,14 +357,7 @@ function ListedCloudModelPicker({ provider, selectedModel, onModelChange }: Clou
 
 export type ModelProviderId = 'ollama' | CloudProvider | 'hermes' | 'paid';
 
-const PROVIDER_LABELS: Record<ModelProviderId, string> = {
-  ollama: 'Ollama',
-  nvidia_nim: 'NVIDIA NIM',
-  gemini: 'Gemini',
-  openrouter: 'OpenRouter',
-  hermes: 'Hermes',
-  paid: 'Paid'
-};
+const PROVIDER_LABELS: Record<ModelProviderId, string> = AGENT_PROVIDER_LABELS;
 
 const PAID_PROVIDER_NAMES: Record<string, string> = { claude: 'Claude', chatgpt: 'ChatGPT', openrouter: 'OpenRouter' };
 
@@ -446,7 +440,7 @@ interface ModelProviderPickerProps {
    */
   agentId?: string;
   /**
-   * Settings → Agents only: a Paid tab, the paid model chosen in Settings → General (Allow paid models), used for the
+   * Settings → Agents only: a Paid tab, the paid model chosen in Settings → Approvals (Allow paid models), used for the
    * agent's steps in a request, each asking first with its cost (2.11.0 QA, owner 2026-11-01).
    */
   allowPaid?: boolean;
@@ -466,8 +460,8 @@ export function ModelProviderPicker({ provider, onProviderChange, selectedModel,
       const id = m.paidModelId() || '';
       const [prov, ...rest] = id.split(':');
       setPaid(available.ok
-        ? { ok: true, line: `${PAID_PROVIDER_NAMES[prov] || prov} · ${rest.join(':') || 'its default model'}. Each request asks first, with the cost. Change it in Settings → General (Allow paid models).` }
-        : { ok: false, line: `${available.reason || 'Paid models are off.'} Paid models are set up in Settings → General (Allow paid models).` });
+        ? { ok: true, line: `${PAID_PROVIDER_NAMES[prov] || prov} · ${rest.join(':') || 'its default model'}. Each request asks first, with the cost. Change it in Settings → Approvals (Allow paid models).` }
+        : { ok: false, line: `${available.reason || 'Paid models are off.'} Paid models are set up in Settings → Approvals (Allow paid models).` });
     }).catch(() => { /* treated as unavailable */ });
     return () => { cancelled = true; };
   }, [allowPaid, provider, agentId]);

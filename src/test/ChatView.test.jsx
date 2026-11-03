@@ -259,9 +259,17 @@ describe('ChatView', () => {
     const made = { id: 'm1', kind: 'video', prompt: 'a cat on a boat', path: 'Miya/2026-10-30/video-1.mp4', status: 'done', atMs: Date.now() };
     vi.mocked(chatMediaDoneSince).mockReturnValueOnce([made]).mockReturnValue([]);
     render(<ChatView {...makeProps()} />);
-    expect(await screen.findByText('Miya made a video: a cat on a boat')).toBeInTheDocument();
+    expect(await screen.findByText('Miya made a video: a cat on a boat (Miya/2026-10-30/video-1.mp4)')).toBeInTheDocument();
     expect(screen.getByTestId('higgsfield-media').textContent).toBe('Miya/2026-10-30/video-1.mp4');
     expect(markChatMediaShown).toHaveBeenCalledWith('m1');
+  });
+
+  // Owner, 2026-11-02: a picture Miya made showed as "Miya made a video".
+  it('shows a picture Miya made as a picture, with where it is', async () => {
+    const made = { id: 'm2', kind: 'picture', prompt: 'a beagle in a pumpkin costume', path: 'Miya/2026-11-01/picture-234435-a3cd4928.png', status: 'done', atMs: Date.now() };
+    vi.mocked(chatMediaDoneSince).mockReturnValueOnce([made]).mockReturnValue([]);
+    render(<ChatView {...makeProps()} />);
+    expect(await screen.findByText('Miya made a picture: a beagle in a pumpkin costume (Miya/2026-11-01/picture-234435-a3cd4928.png)')).toBeInTheDocument();
   });
 
   it('renders without crashing', () => {

@@ -128,7 +128,6 @@ const AgentActivityLog = lazy(() => import('./components/AgentActivityLog').then
 const AgentPerformanceView = lazy(() => import('./components/AgentPerformanceView').then((mod) => ({ default: mod.AgentPerformanceView })));
 const SessionHistoryView = lazy(() => import('./components/SessionHistoryView').then((mod) => ({ default: mod.SessionHistoryView })));
 
-import { handleCompanionCommand } from './services/companionCommandService';
 
 /** Miya Studio opens on this project (a content video started from Chat, phase 6b). */
 async function openContentProject(projectId: string): Promise<void> {
@@ -144,7 +143,16 @@ import { expireWaitingRequests } from './services/jose/joseExpiry';
 import { loadUserSkills } from './services/skills/userSkills';
 import { startPostScheduler, stopScheduler } from './services/marcusExecutionService';
 import { startResourceWatcher } from './services/resources/idleStop';
+import { startPhoneLink, phoneAccessOn, linkSocketFactory, onPhoneCall, publish as publishToPhones, pushNotice } from './services/phone/phoneLink';
+import { startPhoneNotifications } from './services/phone/phoneNotifications';
+import { handlePhoneCall } from './services/phone/phoneCalls';
+import { startPhoneMirror } from './services/phone/phoneMirror';
+import { phoneAuth, phoneRelayUrl, setPhoneSignInProvider } from './services/phone/phoneAccount';
+import { createDesktopPhoneSignIn, desktopSignInConfig } from './services/phone/desktopSignIn';
 import { randomHex } from './lib/randomId';
+
+// The computer's sign-in for phone access: the browser sign-in page, kept in the OS keychain.
+setPhoneSignInProvider(createDesktopPhoneSignIn({ invoke: (cmd, args) => invoke(cmd, args), ...desktopSignInConfig() }));
 
 const parsedSearchParams = new URLSearchParams(window.location.search);
 const IS_COACH_WINDOW = parsedSearchParams.get('coach') === '1';
@@ -214,6 +222,18 @@ function AppShell() {
   useEffect(() => {
     if (IS_COACH_WINDOW) return undefined;
     return startResourceWatcher();
+  }, []);
+  // Phone access (phone app phase 1): the link to the relay, only when a phone is paired and
+  // phone access is on, and only when this build has a relay address.
+  useEffect(() => {
+    if (IS_COACH_WINDOW) return undefined;
+    const relayUrl = phoneRelayUrl();
+    if (!relayUrl || !phoneAccessOn()) return undefined;
+    const offCalls = onPhoneCall(handlePhoneCall);
+    const stopMirror = startPhoneMirror({ publish: publishToPhones });
+    const stopLink = startPhoneLink({ relayUrl, auth: phoneAuth, socket: linkSocketFactory() });
+    const stopNotices = startPhoneNotifications({ push: pushNotice });
+    return () => { stopNotices(); stopLink(); stopMirror(); offCalls(); };
   }, []);
   const isCoachWindow = IS_COACH_WINDOW;
   const coachAgentFromQuery = COACH_AGENT_FROM_QUERY;
@@ -607,141 +627,6 @@ function AppShell() {
     return () => { stopFn?.(); };
   }, []);
 
-  // iOS Companion: listen for commands from iOS and route through Jose
-  useEffect(() => {
-    if (typeof window.__TAURI_INTERNALS__ === 'undefined') return;
-    let unlistenCommand: (() => void) | null = null;
-    let unlistenApprove: (() => void) | null = null;
-    let unlistenAbort: (() => void) | null = null;
-    let unlistenRunWorkflow: (() => void) | null = null;
-    let unlistenSteerBoardroom: (() => void) | null = null;
-    let registered = false;
-    (async () => {
-      try {
-        const { listen } = await import('@tauri-apps/api/event');
-        const { invoke } = await import('@tauri-apps/api/core');
-
-        // Track active pipeline AbortControllers by commandId for abort_command
-        const activeAborts = new Map<string, AbortController>();
-
-        unlistenCommand = await listen('companion://command', async (event) => {
-          const validated = validateCompanionCommand(event.payload);
-          if (!validated) {
-            console.warn('[App] Received companion://command with invalid payload, skipping');
-            return;
-          }
-          const { commandId, text, agentId, language, voiceConversation } = validated;
-          const abortCtrl = new AbortController();
-          activeAborts.set(commandId, abortCtrl);
-          try {
-            // Phase 6a: through Jose's one entry (a spoken conversation stays a direct agent reply).
-            await handleCompanionCommand({ commandId, text, agentId, language, voiceConversation }, {
-              broadcast: (eventName, payload) => invoke('companion_broadcast', { event: eventName, payload }),
-              endpoint: settings.endpoint,
-              model: settings.selectedModel,
-              zeroCostMode: settings.zeroCostMode,
-              signal: abortCtrl.signal,
-            });
-          } finally {
-            activeAborts.delete(commandId);
-          }
-        });
-
-        // abort_command: Rust emits companion://abort — cancel the pipeline for that commandId
-        unlistenAbort = await listen('companion://abort', (event) => {
-          const validated = validateAbortCommand(event.payload);
-          if (!validated) {
-            console.warn('[App] Received companion://abort with invalid payload, skipping');
-            return;
-          }
-          const { commandId } = validated;
-          activeAborts.get(commandId)?.abort();
-          activeAborts.delete(commandId);
-          invoke('companion_broadcast', {
-            event: 'done',
-            payload: { commandId, error: 'Aborted by user.' }
-          }).catch(() => {});
-        });
-
-        // Listen for approval requests from iOS — open the ApprovalModal
-        unlistenApprove = await listen('companion://approve', async (event) => {
-          const validated = validateApproveCommand(event.payload);
-          if (!validated) {
-            console.warn('[App] Received companion://approve with invalid payload, skipping');
-            return;
-          }
-          const { taskId } = validated;
-          setApprovalPending(taskId);
-        });
-
-        // Listen for workflow execution requests from iOS — run the workflow registry service
-        unlistenRunWorkflow = await listen('companion://run_workflow', async (event) => {
-          const payload = event.payload as { workflowId: string };
-          if (!payload || typeof payload.workflowId !== 'string') {
-            console.warn('[App] Received companion://run_workflow with invalid payload, skipping');
-            return;
-          }
-          const { workflowId } = payload;
-          console.warn(`[App] Received companion://run_workflow for: ${workflowId}`);
-          try {
-            // Jose phase 7: the workflow's agents run as a Jose request.
-            const { runWorkflow } = await import('./services/workflowRegistryService');
-            await runWorkflow(workflowId, { source: 'companion' });
-            
-            // Send back completed notification to iOS
-            invoke('companion_broadcast', {
-              event: 'done',
-              payload: { commandId: `workflow-${workflowId}`, summary: `Workflow ${workflowId} completed successfully.` }
-            }).catch(() => {});
-          } catch (err) {
-            console.error('[App] Failed to execute companion workflow:', err);
-            invoke('companion_broadcast', {
-              event: 'done',
-              payload: { commandId: `workflow-${workflowId}`, error: `Workflow execution failed: ${err}` }
-            }).catch(() => {});
-          }
-        });
-
-        // Listen for boardroom steering requests from iOS
-        unlistenSteerBoardroom = await listen('companion://steer_boardroom', async (event) => {
-          const payload = event.payload as { sessionId: string; guidance: string };
-          if (!payload || typeof payload.sessionId !== 'string' || typeof payload.guidance !== 'string') {
-            console.warn('[App] Received companion://steer_boardroom with invalid payload, skipping');
-            return;
-          }
-          const { sessionId, guidance } = payload;
-          console.warn(`[App] Received companion://steer_boardroom for session: ${sessionId}, guidance: ${guidance}`);
-          try {
-            const { addThreadMessage } = await import('./services/boardroomThreadService');
-            addThreadMessage({ threadId: sessionId, speaker: 'shayan', content: guidance });
-            
-            // Broadcast success back to iOS
-            invoke('companion_broadcast', {
-              event: 'done',
-              payload: { commandId: `steer-${sessionId}`, summary: 'Boardroom steered successfully.' }
-            }).catch(() => {});
-          } catch (err) {
-            console.error('[App] Failed to steer boardroom:', err);
-            invoke('companion_broadcast', {
-              event: 'done',
-              payload: { commandId: `steer-${sessionId}`, error: `Boardroom steering failed: ${err}` }
-            }).catch(() => {});
-          }
-        });
-
-        registered = true;
-      } catch { /* Tauri API not available */ }
-    })();
-    return () => {
-      if (registered) {
-        try { unlistenCommand?.(); } catch { /* ignore */ }
-        try { unlistenApprove?.(); } catch { /* ignore */ }
-        try { unlistenAbort?.(); } catch { /* ignore */ }
-        try { unlistenRunWorkflow?.(); } catch { /* ignore */ }
-        try { unlistenSteerBoardroom?.(); } catch { /* ignore */ }
-      }
-    };
-  }, [settings.endpoint, settings.zeroCostMode]);
 
   if (isCoachWindow) {
     return (

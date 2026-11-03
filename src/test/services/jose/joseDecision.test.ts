@@ -52,6 +52,30 @@ describe('decideJoseRoute: answer directly or plan', () => {
     expect(llm).not.toHaveBeenCalled();
   });
 
+  // Owner, 2026-11-01: "generate an image of a sunset over mountains" was answered by the model
+  // ("Jose can plan it if they ask for it.") the first time and made the second. A picture,
+  // video or music to make is Miya's work, planned by rule.
+  it('plans a picture, video or music to make without asking the model', async () => {
+    for (const text of ['generate an image of a sunset over mountains', 'make a video of a cat on a boat', 'create a music track for my intro', 'draw a picture of a lighthouse']) {
+      expect(await decideJoseRoute(text)).toMatchObject({ route: 'plan', source: 'rule' });
+    }
+    expect(llm).not.toHaveBeenCalled();
+  });
+
+  // Owner, 2026-11-02: after a picture of a dog, "now make the same dog wear a different costume"
+  // has no picture word, the model failed to plan it, and Alphonso answered in words.
+  it('plans a change to the picture just shown without asking the model', async () => {
+    const picture = { id: 'media-1', kind: 'picture', prompt: 'a beagle in a pumpkin costume', path: 'Miya/2026-11-01/picture-234435-a3cd4928.png', status: 'done', atMs: 1 };
+    localStorage.setItem('alphonso_chat_media_v1', JSON.stringify([picture]));
+    try {
+      const history = [{ role: 'user', content: 'generate an image of a dog in a halloween costume' }, { role: 'assistant', content: `Miya made a picture: ${picture.prompt} (${picture.path})` }];
+      expect(await decideJoseRoute('now make the same dog wear a different custome', { history })).toMatchObject({ route: 'plan', source: 'rule' });
+      expect(llm).not.toHaveBeenCalled();
+    } finally {
+      localStorage.removeItem('alphonso_chat_media_v1');
+    }
+  });
+
   it('plans remember, forget and clean up without asking the model', async () => {
     for (const text of ['Remember that our launch is on Friday the 14th.', 'Can you forget the launch decision?', 'Clean up my memory']) {
       expect(await decideJoseRoute(text)).toMatchObject({ route: 'plan', source: 'rule' });
@@ -81,7 +105,7 @@ describe('decideJoseRoute: answer directly or plan', () => {
 
   it('lets the model decide everything else', async () => {
     llm.mockResolvedValueOnce(says('plan'));
-    expect(await decideJoseRoute('Make a launch video for my app')).toMatchObject({ route: 'plan', source: 'model' });
+    expect(await decideJoseRoute('Sort out my week around the launch')).toMatchObject({ route: 'plan', source: 'model' });
     llm.mockResolvedValueOnce(says('direct'));
     expect(await decideJoseRoute('Thanks, that helps')).toMatchObject({ route: 'direct', source: 'model' });
   });

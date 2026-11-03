@@ -16,6 +16,11 @@ import { randomHex } from '../../lib/randomId';
 import { checkComfyClip, makeComfyClip } from './comfyVideoClip';
 import { requireOutputRoot } from './contentProjectFiles';
 import { contentAppSettings } from './contentStepRecorder';
+import { listChatMedia, saveChatMediaResult, type ChatMediaKind, type ChatMediaResult } from './chatMediaStore';
+import type { EarlierPicture } from './pictureFollowUp';
+import { writePicturePrompt } from './picturePrompt';
+
+export { listChatMedia, chatMediaLine, type ChatMediaKind, type ChatMediaResult } from './chatMediaStore';
 
 export const CHAT_MEDIA_LABEL = 'Video or music asked for.';
 export const NO_VIDEO_MODEL = 'No video model is installed: install one in Runtime Hub → ComfyUI → Video models. Nothing was started.';
@@ -25,24 +30,9 @@ export const CHAT_CLIP_SECONDS = 5;
 /** How long a piece of music asked for in Chat is. */
 export const CHAT_MUSIC_SECONDS = 30;
 
-const STORE_KEY = 'alphonso_chat_media_v1';
-const KEEP = 100;
-
-export type ChatMediaKind = 'video' | 'music';
-
-export interface ChatMediaResult {
-  id: string;
-  kind: ChatMediaKind;
-  prompt: string;
-  /** Relative to the output folder. */
-  path: string;
-  status: 'done' | 'pending';
-  atMs: number;
-  /** A clip still in ComfyUI. */
-  jobId?: string;
-  commandId?: string;
-  shownInChat?: boolean;
-}
+/** How much of an earlier picture ComfyUI redraws for a change (1 = all of it): enough to change a
+ *  costume or a colour while the subject and the layout stay (owner, 2026-11-02: "the same dog"). */
+export const PICTURE_CHANGE_STRENGTH = 0.6;
 
 /** Words about a video or song that make the request writing, not media to make. */
 const WRITING = /\b(scripts?|outlines?|ideas?|lyrics|titles?|descriptions?|captions?|storyboards?|plans?)\b/i;
@@ -87,23 +77,7 @@ export async function askChatMedia(input: { text: string; source: string; onProg
   return submitStepsToJose({ text: input.text, source: input.source, steps: [step], label: CHAT_MEDIA_LABEL, saveDecisions: false, onProgress: input.onProgress as never });
 }
 
-export function listChatMedia(): ChatMediaResult[] {
-  try {
-    const list = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
-    return Array.isArray(list) ? list : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveResult(result: ChatMediaResult): void {
-  const rest = listChatMedia().filter((r) => r.id !== result.id);
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify([result, ...rest].slice(0, KEEP)));
-  } catch {
-    // The file is still in the folder.
-  }
-}
+const saveResult = saveChatMediaResult;
 
 /** Done results made since a time and not yet shown in Chat. */
 export function chatMediaDoneSince(sinceMs: number): ChatMediaResult[] {
@@ -129,7 +103,7 @@ function outStem(kind: ChatMediaKind, now = new Date()): string {
   return `${agentName('miya')}/${day}/${kind}-${time}-${randomHex(8)}`;
 }
 
-function stepResult(assignment: { agent: string; actionType: string }, state: 'completed' | 'failed', summary: string, path?: string, data?: unknown) {
+function stepResult(assignment: { agent: string; actionType: string }, state: 'completed' | 'failed' | 'pending_review', summary: string, path?: string, data?: unknown) {
   return {
     summary: `${agentName(assignment.agent)}: ${summary}`,
     resultState: state,
@@ -194,6 +168,52 @@ export async function executeChatMedia(
   saveResult(saved);
   await tellTelegram(packet, root, saved);
   return stepResult(assignment, 'completed', `made the video (${path}).`, path, { kind, prompt });
+}
+
+/** Miya's picture asked for in words (owner, 2026-11-01): made by ComfyUI, then saved under
+ *  `<output folder>/Miya/<date>/` like a video, so Chat shows it and says where it is. Since
+ *  2026-11-02 her model first writes what the picture shows (picturePrompt.ts), and a change to the
+ *  picture just shown (`payload.earlier`, pictureFollowUp.ts) starts from that picture. */
+export async function executeChatPicture(
+  request: string,
+  assignment: { agent: string; actionType: string; payload?: { earlier?: EarlierPicture } },
+  packet: { id?: string; commandId?: string } | null,
+): Promise<ReturnType<typeof stepResult>> {
+  let root: string;
+  try {
+    root = requireOutputRoot(contentAppSettings());
+  } catch (error) {
+    return stepResult(assignment, 'failed', (error as Error).message);
+  }
+  const earlier = assignment.payload?.earlier?.path ? assignment.payload.earlier : null;
+  const written = await writePicturePrompt(request, earlier);
+  const notes = written.note ? [written.note] : [];
+  const endpoint = getComfyUiEndpoint();
+  let startImage: string | null = null;
+  if (earlier && written.useEarlier) {
+    try {
+      const uploaded = await invoke<{ name?: string }>('comfyui_upload_image', { request: { endpoint, workspaceRoot: root, relPath: earlier.path } });
+      startImage = uploaded?.name || null;
+      if (!startImage) notes.push("The earlier picture couldn't be used (ComfyUI gave it no name), so this one is new.");
+    } catch (error) {
+      notes.push(`The earlier picture couldn't be used (${(error as Error)?.message || String(error)}), so this one is new.`);
+    }
+  }
+  const prompt = written.description;
+  const job = { prompt, width: 512, height: 512, steps: 20, cfgScale: 7, ...(startImage ? { startImage, denoise: PICTURE_CHANGE_STRENGTH } : {}) };
+  const image = await generateComfyUiImage(job, { endpoint })
+    .catch((error: Error) => ({ ok: false, error: error.message })) as { ok?: boolean; pending?: boolean; jobId?: string; previewBase64?: string; error?: string; message?: string };
+  const tail = notes.length ? ` ${notes.join(' ')}` : '';
+  if (image?.pending) return stepResult(assignment, 'pending_review', `the picture is still being made in ComfyUI.${tail}`, undefined, { kind: 'picture', prompt, jobId: image.jobId });
+  if (!image?.ok || !image.previewBase64) return stepResult(assignment, 'failed', `couldn't make the picture: ${image?.error || image?.message || 'ComfyUI gave no picture'}${tail}`);
+  const path = `${outStem('picture')}.png`;
+  const folder = `${root.replace(/[\\/]+$/, '')}/${path.slice(0, path.lastIndexOf('/'))}`;
+  await invoke('save_image_to_folder', { base64Data: image.previewBase64, filename: path.slice(path.lastIndexOf('/') + 1), folder });
+  const saved: ChatMediaResult = { id: `media-${Date.now()}-${randomHex(4)}`, kind: 'picture', prompt, atMs: Date.now(), path, status: 'done', ...(packet?.commandId ? { commandId: packet.commandId } : {}) };
+  saveResult(saved);
+  await tellTelegram(packet, root, saved);
+  const what = startImage ? 'changed the earlier picture' : 'made the picture';
+  return stepResult(assignment, 'completed', `${what} (${path}).${tail}`, path, { kind: 'picture', prompt, ...(startImage ? { from: earlier?.path } : {}) });
 }
 
 /** Quick package's Check again: one look at a clip still in ComfyUI; never a new run. */

@@ -2,6 +2,24 @@
 
 Rule 12 / Rule 11. This register survives the session. Future agents resume from here.
 
+## 2026-11-02: The phone's Requests screen runs past the right edge (closed 2026-11-02)
+
+- **What happened:** in the 6.9-inch store screenshots (phone phase 3 part C, `docs/store/screenshots/iphone-6.9/2-requests.png`) a long request title in the list and the plan map run past the screen's right edge at 440 points wide. It is the real Requests screen (the desktop board in one column, `src/mobile/screens/Requests.tsx`), not the demo; the step boxes also show raw task types (`distribution_slack`).
+- **Fixed (overflow):** the board's grid had no column at phone width and grid items keep their content's width, so the long title widened the column (462pt on a 440pt screen). `JoseRequestsBoard.tsx` now uses `grid-cols-1` and `min-w-0` on the list; measured 440 of 440 in a phone-width browser, screenshots retaken.
+- **Fixed (task names):** the plan map and the Approve/Reject buttons show `taskLabel()` ("post a message to Slack"), on the phone and the desktop.
+
+## 2026-11-02: Cloud Voice on AWS has no client left (owner decides)
+
+- **What happened:** the old Swift iPhone app was Cloud Voice's only client, and it retired in phone phase 3 part C (archived to `archive/MIGHTBEUSEDLATER/swift-companion/`). Cloud Voice (`voice/cloud-backend/`, the `alphonso-cloud-voice` ECS service, its Supabase tables) keeps running and costing money.
+- **Left alone on purpose (owner, 2026-11-02):** any change under `voice/cloud-backend/` redeploys the service when it reaches main (`deploy-cloud-voice.yml`), so Atlas's switched-off control-plane routes (`atlas_*.py`, `ATLAS_CONTROL_PLANE_DEMO_MODE`, default off) and their Supabase migration and test stay where they are. Removing an applied migration from the repo would also break `supabase db push`'s history.
+- **To decide:** keep Cloud Voice for a later phone feature, or shut it down (ECS service, ECR images, Supabase project, Railway Farsi voice) and archive its code with Atlas's.
+
+## 2026-11-02: Approvals deserve their own Settings page (closed 2026-11-02)
+
+- **What happened:** the approval switches (Approval Mode, one switch per kind of action, Allow paid models, Jose on Telegram, waiting requests expiry, OpenRouter's free limit) all sit at the bottom of Settings → General, under Desktop & UI. The owner couldn't find them, and 13 code comments called the place "Settings → Approvals", a page that doesn't exist (now corrected to Settings → General → Approval Mode; on-screen text was already guarded by `settingsPathsInMessages.test.js`).
+- **Decision (owner, 2026-11-02):** don't detour from the phone work; decide Settings' grouping in phone phase 3 part B (Settings and Connectors on the phone, see and switch), and give the desktop an Approvals page in the same pass.
+- **Closed:** Settings → Approvals holds them all now (phone phase 3 part B, task 2); every on-screen "Settings → <page>" is checked against the real pages.
+
 ## 2026-11-01: Linux missing from 2.11.0 (fixed on feat/mobile-app, ships next release)
 
 - **What happened:** the 2.11.0 release built all three installers, but GitHub refused the Linux AppImage at upload: about 2.08 GB, over the 2 GiB limit for one release file. It bundled the 1.9 GB starter model, and the closing phase added ffmpeg. 2.10.0's AppImage was 2.01 GB, just under.

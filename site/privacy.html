@@ -1,0 +1,92 @@
+<!doctype html>
+<!--
+  Each statement below is backed by the code (checked 2026-11-02, phone app phase 3 part C):
+  - Sign-in through Firebase Authentication (Apple, Google, email link): mobile/src/native.ts.
+  - The relay stores only devices/{deviceId} (account id, computer or phone, last seen, notification
+    token) and pairings/{phoneDeviceId} (account id, computer, when): gateway/phone-relay/src/firebase.js,
+    memoryStore.js. Its log has no tokens, messages or device names (server.js); Caddy runs with no
+    access log (vm/startup.sh).
+  - Messages and notifications are sealed between the two devices (libsodium crypto_box), the relay
+    never has the keys: src/services/phone/phoneCrypto.ts, gateway/phone-relay/README.md.
+  - Notifications go through Firebase Cloud Messaging and Apple's push service as sealed data; Apple
+    shows "New activity" if the phone can't open one: gateway/phone-relay/src/pushMessage.js.
+  - Face ID / fingerprint is checked by the phone; the app gets yes or no: mobile/src/native.ts confirm(),
+    mobile/ios/App/App/AlphonsoPhonePlugin.swift, mobile/android/.../AlphonsoPhonePlugin.java.
+  - Previews of pictures and videos are kept on the phone: src/mobile/previewFetch.ts.
+  - Deleting the account: gateway/phone-relay/src/routing.js deleteAccount, src/mobile/phoneSession.ts.
+  - No analytics, ads or tracking libraries: mobile/package.json.
+  Open points for the owner are in docs/store/OPEN_QUESTIONS.md.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alphonso privacy policy</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Alphonso privacy policy</h1>
+      <p>Obsidian Media · Last updated 2 November 2026</p>
+    </header>
+
+    <p>Alphonso is a desktop app that runs on your own computer, and a phone app that connects to it.
+      This policy says what each part handles. In short: your work stays on your computer, the phone
+      and the computer talk with end-to-end encryption, and we keep only what is needed to connect them.</p>
+
+    <h2>On your computer</h2>
+    <p>The desktop app keeps your chats, requests, projects and settings on your computer. Keys you
+      enter for outside services are kept in your computer's own keychain. When you connect an outside
+      service (for example a search service, a social network or a paid AI model) and Alphonso uses it,
+      what it sends goes to that service under its own terms. Apart from connecting to your phone
+      (below), nothing from the desktop app is sent to us.</p>
+
+    <h2>The phone app</h2>
+    <ul>
+      <li><strong>Your sign-in.</strong> You sign in with Apple, Google or an email link, through
+        Google's Firebase Authentication. It keeps your account id and your email address so the same
+        account can sign in on your phone and your computer.</li>
+      <li><strong>What connects your devices.</strong> Our relay (run on Google Cloud) passes messages
+        between your phone and your computer. It stores only: which devices belong to your account,
+        whether each is a phone or a computer, when each was last connected, which phone is paired
+        with which computer, and your phone's notification token. It keeps no messages, requests,
+        files, names of your projects or keys, and keeps no access log.</li>
+      <li><strong>Your content is end-to-end encrypted.</strong> Everything between your phone and your
+        computer, including notifications, is sealed on one device and opened only on the other. The
+        relay passes it on without being able to read it.</li>
+      <li><strong>Notifications</strong> go through Firebase Cloud Messaging and Apple's push service,
+        sealed. If the phone can't open one in time, it shows only "New activity".</li>
+      <li><strong>Face ID and fingerprint</strong> are checked by your phone. The app only learns
+        whether the check passed.</li>
+      <li><strong>Pictures and videos</strong> you open on the phone are kept on the phone as previews.</li>
+      <li><strong>The demo</strong> ("Try a demo") uses sample data built into the app. It sends
+        nothing and keeps nothing.</li>
+    </ul>
+
+    <h2>What we don't do</h2>
+    <ul>
+      <li>We do not sell or share your data.</li>
+      <li>There is no advertising and no tracking, in either app.</li>
+      <li>We don't read your content: we can't, it is encrypted end to end.</li>
+    </ul>
+
+    <h2>Keeping and deleting</h2>
+    <p>The relay's records are kept while your account exists. To delete your account, open the phone
+      app and choose More → <strong>Delete my account</strong>. That deletes your sign-in and the relay's
+      records for every phone and computer on your account. Your work on your computer is not touched;
+      remove it there if you want it gone. To remove one phone only, use Settings → Runtime → Remote
+      Access → Phones on your computer.</p>
+
+    <h2>Children</h2>
+    <p>Alphonso is not made for children under 13, and we don't knowingly collect their data.</p>
+
+    <h2>Changes and contact</h2>
+    <p>If this policy changes, the new version is posted here with a new date. Questions about privacy:
+      open an issue on <a href="https://github.com/obsidian-media/AlphonsoEcosystem/issues">GitHub Issues</a>
+      (issues are public, so don't include private details).</p>
+
+    <footer>© 2026 Obsidian Media · <a href="index.html">Alphonso</a> · <a href="support.html">Support</a></footer>
+  </main>
+</body>
+</html>

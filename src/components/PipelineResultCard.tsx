@@ -258,7 +258,7 @@ function GeneratedImageCard({ img, index, outputFolder }: GeneratedImageCardProp
         <div className="text-[11px] text-(--error)">
           <div className="font-medium">Generation failed</div>
           <div className="text-[10px] text-(--text-3) mt-0.5 truncate">{img.prompt}</div>
-          <div className="text-[10px] text-(--error) mt-0.5">{img.error || 'ComfyUI may be offline. Start it from Settings → Local Services, or paste the prompt above into ComfyUI manually.'}</div>
+          <div className="text-[10px] text-(--error) mt-0.5">{img.error || 'ComfyUI may be offline. Start it from Settings → Runtime → Local Services, or paste the prompt above into ComfyUI manually.'}</div>
         </div>
       )}
     </div>

@@ -10,6 +10,13 @@ const DEFAULT_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WAITING = new Set(['waiting_approval', 'waiting_plan_approval', 'waiting_setup']);
 
+/** What Chat says 10 minutes after a step started waiting: it still waits on the board, until it
+ *  expires (owner, 2026-11-01; it used to say the approval timed out and to resubmit). */
+export function stillWaitingLine(days = getWaitingExpiryDays()): string {
+  const base = 'Still waiting for your approval. It stays on the board (Orchestrator → Requests) until you approve or reject it';
+  return days > 0 ? `${base}, or for ${days} ${days === 1 ? 'day' : 'days'}.` : `${base}.`;
+}
+
 export function getWaitingExpiryDays(): number {
   let raw: unknown;
   try {

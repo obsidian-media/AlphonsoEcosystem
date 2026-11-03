@@ -26,22 +26,16 @@ Run verification with `bash scripts/verify.sh` (or `pwsh scripts/verify.ps1`).
 src/                   React frontend (250 .tsx, 73 .jsx — mostly tests and older services)
   agents/              9 agent profiles and schemas (what each may do is src/services/jose/agentPermissionTable.ts)
   components/          175 UI components (incl. miya/, jose/, calendar/ for the content factory, Jose's board and the Calendar)
-  services/            355 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
+  services/            385 services (policy-gated, not stubs; 185/185 audited line-by-line 2026-07-28)
     connectors/        Connector outbound dispatch (policy-gated, calls Rust commands via invoke)
     jose/              Jose's planner, step graphs, effects, requests, Telegram, paid models
     contentFactory/    Miya's content factory: projects, brands, steps, media, posts, results, characters, motion
   hooks/               21 custom hooks (useAppShellState, useAppEffects split into 9 concerns)
   lib/                 Utilities (ollama.ts, chatUtils.js, appStorage.ts, randomId.ts, readableValue.ts)
-  test/                635 test files, 6,933 tests (Vitest; see ground truth for current verification status)
-ios/                   iOS companion app (SwiftUI)
-  AlphonsoCompanion/
-    AlphonsoCompanionApp.swift    — @main entry point
-    ContentView.swift             — tab view container
-    Views/                        — PairingView, ChatView, AgentDockView, BoardroomView, SettingsView
-    Services/                     — WebSocketService.swift, MDNSService.swift
-    Models/                       — ConnectionState.swift
+  test/                679 test files, 6,933 tests (Vitest; see ground truth for current verification status)
+mobile/                The phone app (Capacitor: iOS and Android); the old Swift app is archived
   src-tauri/             Rust backend
-  src/lib.rs           ~987 lines, 226 Tauri commands (across 58 modules)
+  src/lib.rs           ~983 lines, 235 Tauri commands (across 56 modules)
   src/utils.rs         Shared utilities
   src/kv_store.rs      KV store module (SQLite-backed)
   src/whatsapp_webhook.rs  WhatsApp webhook module
@@ -64,11 +58,6 @@ ios/                   iOS companion app (SwiftUI)
   src/voice_sidecar.rs Voice sidecar management
   src/os_keychain_store.rs OS keychain credential storage
   src/runtime_manager.rs Runtime process manager
-  src/companion_server.rs iOS companion WebSocket server
-  src/companion_discovery.rs mDNS companion discovery
-  src/companion_auth.rs Companion PIN authentication
-  src/companion_types.rs Shared companion data types
-  src/companion_router.rs Companion command routing
   src/commands/         Split-out commands (bridge, clipboard, filesystem, jose, notification, ocr, restore, runtime, system, updates, url)
   src/comfyui_installs.rs / comfyui_proxy.rs / comfyui_video_models.rs  Finding ComfyUI, its narrow backend route, pinned video/character/motion models
   src/mcp_client.rs / mcp_auth.rs  Outside tools: Alphonso calls online MCP servers (never called into)
@@ -90,7 +79,7 @@ docs/                  195 documentation .md files (209 markdown docs total incl
 ## Build & Test Commands
 ```bash
 npm run dev              # Vite dev server (port 5173)
-npm run test             # 6,933 tests (635 files)
+npm run test             # 6,933 tests (679 files)
 npm run lint             # ESLint on src/
 npm run build            # Vite production build (OXC compiler)
 npm run verify:app       # lint + test + build in one command

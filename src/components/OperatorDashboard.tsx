@@ -333,7 +333,7 @@ export function OperatorDashboard({
           <div className="flex items-center justify-between gap-4">
             <div>
               <h1 className="font-serif text-xl font-bold text-(--text-1)">Developer mode is off</h1>
-              <p className="text-sm text-(--text-3) mt-1">The Operator Dashboard is a developer tool: telemetry, proofs, memory dashboards and supervised runtime commands. Turn on developer mode to use it (also in Settings → Desktop &amp; UI).</p>
+              <p className="text-sm text-(--text-3) mt-1">The Operator Dashboard is a developer tool: telemetry, proofs, memory dashboards and supervised runtime commands. Turn on developer mode to use it (also in Settings → General → Desktop &amp; UI).</p>
             </div>
             <button
               onClick={() => setOperatorMode(true)}

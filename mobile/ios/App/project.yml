@@ -1,0 +1,69 @@
+# The iPhone app's Xcode project, made by XcodeGen (the build runs `xcodegen` first):
+# Capacitor's app, this app's notification extension, Firebase Messaging and libsodium.
+# Firebase's version must stay within @capacitor-firebase/authentication's range (12.x).
+name: App
+options:
+  deploymentTarget:
+    # Tailwind v4's CSS needs Safari 16.4.
+    iOS: "16.4"
+configFiles:
+  Debug: firebase.xcconfig
+  Release: firebase.xcconfig
+packages:
+  CapApp-SPM:
+    path: CapApp-SPM
+  Sodium:
+    url: https://github.com/jedisct1/swift-sodium
+    exactVersion: 0.11.0
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    exactVersion: 12.19.2
+targets:
+  App:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+        excludes: ["public", "public/**", "*.entitlements", "GoogleService-Info.plist"]
+      - path: App/public
+        type: folder
+      - path: Shared
+      - path: App/GoogleService-Info.plist
+        optional: true
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.alphonso.companion
+        INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/App.entitlements
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+      configs:
+        Debug:
+          APS_ENVIRONMENT: development
+        Release:
+          APS_ENVIRONMENT: production
+    dependencies:
+      - package: CapApp-SPM
+        product: CapApp-SPM
+      - package: Firebase
+        product: FirebaseMessaging
+      - target: NotificationService
+  NotificationService:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: NotificationService
+        excludes: ["*.entitlements"]
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.alphonso.companion.NotificationService
+        INFOPLIST_FILE: NotificationService/Info.plist
+        CODE_SIGN_ENTITLEMENTS: NotificationService/NotificationService.entitlements
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+    dependencies:
+      - package: Sodium
+        product: Sodium

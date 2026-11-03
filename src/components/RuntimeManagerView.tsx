@@ -46,6 +46,7 @@ import { openExternalUrl } from '../services/browserAutomationService';
 import { findComfyuiInstalls, type ComfyUiInstall } from '../services/comfyuiSettingsService';
 import { VideoModelsPanel } from './VideoModelsPanel';
 import { CharacterReferencePanel, MotionTransferPanel } from './CharacterReferencePanel';
+import { PictureModelsPanel } from './PictureModelsPanel';
 import { getStorage } from '../lib/appStorage';
 import { InstallLocationPicker } from './InstallLocationPicker';
 import { MemorySection } from './resources/MemorySection';
@@ -441,6 +442,7 @@ function ToolCard({ tool, onAction, onAutostartToggle, existingInstall }: ToolCa
         </p>
       )}
 
+      {tool.name === 'comfyui' && (tool.installed || usingExisting) && <PictureModelsPanel />}
       {tool.name === 'comfyui' && (tool.installed || usingExisting) && <VideoModelsPanel />}
       {tool.name === 'comfyui' && (tool.installed || usingExisting) && <CharacterReferencePanel />}
       {tool.name === 'comfyui' && (tool.installed || usingExisting) && <MotionTransferPanel />}
