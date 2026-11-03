@@ -123,3 +123,4 @@ src-tauri/vendor/ffmpeg/*
 # Local-only archive: old copies kept on this computer, never committed
 # (e.g. the full README before the 2026-10-30 slim-down).
 archive/local/
+spike-results/
