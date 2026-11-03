@@ -28,7 +28,7 @@ describe("the phone app's native code", () => {
   });
 
   it('has every plugin method the shared code calls, under one plugin name', () => {
-    expect(methods.sort()).toEqual(['confirm', 'getSecret', 'pushToken', 'requestNotifications', 'setSecret', 'takePendingActions']);
+    expect(methods.sort()).toEqual(['confirm', 'getSecret', 'modelAnswer', 'modelStatus', 'pushToken', 'requestNotifications', 'setSecret', 'takePendingActions']);
     expect(native).toContain("registerPlugin<AlphonsoPhonePlugin>('AlphonsoPhone')");
     expect(swiftPlugin).toContain('jsName = "AlphonsoPhone"');
     expect(javaPlugin).toContain('name = "AlphonsoPhone"');

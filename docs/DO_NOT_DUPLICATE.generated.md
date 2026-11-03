@@ -1,7 +1,7 @@
 <!-- GENERATED FILE — DO NOT EDIT. Run `npm run generate:dnd-map`. -->
 # Do Not Duplicate — Generated Source Inventory
 
-Source-backed inventory: 385 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
+Source-backed inventory: 388 services and 184 components. Human purpose descriptions remain in [CLAUDE.md](../CLAUDE.md).
 
 | Kind | Source file | Static exports |
 |---|---|---|
@@ -340,7 +340,7 @@ Source-backed inventory: 385 services and 184 components. Human purpose descript
 | service | `src/services/echo/echoSteps.ts` | `COULDNT_SAVE`, `EchoCtx`, `echoSavePrompt`, `EchoStepResult`, `extractDecisions`, `NO_DECISIONS_THIS_WEEK`, `NOTHING_SAVED_ABOUT`, `NOTHING_TO_REMEMBER`, `runEchoStep`, `WHICH_TO_FORGET`, `withoutRememberWords` |
 | service | `src/services/echo/meaning.ts` | `ECHO_EMBED_MODEL`, `ensureMeaning`, `indexDecisionMeaning`, `MEANING_MIN_SIMILARITY`, `MEANING_QUERY_WAIT_MS`, `meaningEnabled`, `meaningMatches`, `meaningQuestion`, `meaningState`, `MeaningState`, `onMeaningState`, `resetMeaningForTests` |
 | service | `src/services/echo/memoryIntents.ts` | `asksToCleanUpMemory`, `asksToForget`, `asksToRemember`, `asksWhatWasDecided`, `MEMORY_ONLY_INSTRUCTION`, `memoryOnlyTask` |
-| service | `src/services/echo/recall.ts` | `answerDecisionsBlock`, `contentWords`, `decisionLine`, `decisionsFor`, `decisionsText`, `indexDecision`, `NEAR_REPEAT`, `nearlySame`, `resetChromaCheckForTests`, `searchDecisions`, `surfaceName` |
+| service | `src/services/echo/recall.ts` | `answerDecisionsBlock`, `contentWords`, `decisionLine`, `decisionsBlockFrom`, `decisionsFor`, `decisionsText`, `indexDecision`, `NEAR_REPEAT`, `nearlySame`, `rankDecisions`, `resetChromaCheckForTests`, `searchDecisions`, `surfaceName` |
 | service | `src/services/echoFileWatcherService.ts` | `getWatcherConfig`, `saveWatcherConfig`, `startFileWatcher`, `stopFileWatcher`, `WatcherConfig` |
 | service | `src/services/echoMemoryService.ts` | `activePreferences`, `addDecision`, `decisionsFor`, `decisionsText`, `ECHO_LIMITS`, `editDecision`, `extractDecisions`, `forgetDecision`, `getDecision`, `isChromaHealthy`, `listDecisions`, `runEchoStep`, `searchDecisions` |
 | service | `src/services/escalationCallService.ts` | `EscalationCallRecord`, `EscalationDecision`, `EscalationSettings`, `getEscalationSettings`, `listEscalationCallRecords`, `runEscalationCheck`, `saveEscalationSettings`, `startEscalationPolling` |
@@ -372,7 +372,7 @@ Source-backed inventory: 385 services and 184 components. Human purpose descript
 | service | `src/services/jose/agentPaidModels.ts` | `STEPS_WITHOUT_AGENT_MODEL`, `withAgentPaidModels` |
 | service | `src/services/jose/agentPermissionTable.ts` | `AGENT_PERMISSION_TABLE`, `AgentPermissions`, `describeAgentPermissions`, `describeResponsibility`, `isEffectAllowed`, `isTaskTypeAllowed`, `ownerOf`, `responsibilityLines`, `taskTypePartAllowed` |
 | service | `src/services/jose/joseAdapt.ts` | `AdaptContext`, `adaptPlan`, `PlanChange`, `setPlanAdapterForTests` |
-| service | `src/services/jose/joseDecision.ts` | `asksForResearch`, `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `JoseRouteDecision`, `ruleRoute` |
+| service | `src/services/jose/joseDecision.ts` | `asksForResearch`, `decideJoseRoute`, `DECISION_TIMEOUT_MS`, `joseDecisionPrompt`, `JoseRouteDecision`, `readJoseDecision`, `ruleRoute` |
 | service | `src/services/jose/joseEffects.ts` | `ACTION_EFFECTS`, `COMMAND_CHECKED_EFFECTS`, `DEFAULT_EFFECT_APPROVALS`, `EFFECT_LABELS`, `effectsNeedingApproval`, `getEffectApprovals`, `inferEffects`, `JOSE_EFFECTS`, `JoseEffect`, `LOCKED_EFFECTS`, `stepEffectsToWaitFor` |
 | service | `src/services/jose/joseExpiry.ts` | `expireWaitingRequests`, `getWaitingExpiryDays`, `rejectWaitingPackets`, `stillWaitingLine` |
 | service | `src/services/jose/joseFinish.ts` | `NOTHING_NEW`, `saveRequestDecisions` |
@@ -477,15 +477,18 @@ Source-backed inventory: 385 services and 184 components. Human purpose descript
 | service | `src/services/phone/phase3Calls.ts` | `PHASE3_CALLS`, `Phase3CallName`, `PHONE_SEARCH_RESULTS`, `resetPhase3CallsForTests`, `STALE` |
 | service | `src/services/phone/phase3Mirror.ts` | `BOARDROOM_MIRROR_BYTES`, `BoardroomMirror`, `boardroomMirrorData`, `MASKED_LINE`, `MemoryMirror`, `memoryMirrorData`, `PHONE_DECISIONS`, `PHONE_THREAD_MESSAGES`, `phoneMessage`, `PhoneThreadMessage`, `ProjectMirror`, `projectsMirrorData` |
 | service | `src/services/phone/phoneAccount.ts` | `isSignedIn`, `NOT_AVAILABLE`, `phoneAccessAvailable`, `phoneAuth`, `phoneRelayUrl`, `PhoneSignIn`, `setPhoneSignInProvider`, `signedInEmail`, `signInComputer`, `SignInMethod`, `signOutComputer` |
+| service | `src/services/phone/phoneAnswer.ts` | `answerOnPhone`, `Ask`, `ENGINE_LABEL`, `PHONE_ENGINES`, `PhoneAnswerResult`, `PhoneEngine` |
 | service | `src/services/phone/phoneCalls.ts` | `ALREADY_DONE`, `handlePhoneCall`, `NOT_FROM_PHONE`, `PHONE_CALLS`, `resetPhoneCallsForTests` |
 | service | `src/services/phone/phoneChatLog.ts` | `appendPhoneChat`, `listPhoneChat`, `onPhoneChatChange`, `PHONE_CHAT_KEY`, `PHONE_CHAT_LIMIT`, `PhoneChatMessage` |
 | service | `src/services/phone/phoneCrypto.ts` | `generateKeyPair`, `open`, `openAnonymous`, `seal`, `sealAnonymous` |
 | service | `src/services/phone/phoneLink.ts` | `computerPublicKey`, `LinkBox`, `linkSocketFactory`, `listPhones`, `localLinkBox`, `onPhoneCall`, `PairedPhone`, `PAIRING_WINDOW_MS`, `pairingQr`, `PHONE_ACCESS_KEY`, `phoneAccessOn`, `PhoneAuth`, `PHONES_KEY`, `PREVIEW_RESERVE_SHARE`, `previewFits`, `publish`, `pushNotice`, `relayRoom`, `RelaySocket`, `removePhone`, `resetPhoneLinkForTests`, `setLinkBox`, `setPhoneAccess`, `SocketFactory`, `startPhoneLink`, `webSocketFactory` |
 | service | `src/services/phone/phoneMirror.ts` | `CONTENT_POLL_MS`, `MIRROR_BATCH_MS`, `MIRROR_REQUESTS`, `mirrorSnapshots`, `MODEL_CHOICES_MS`, `startPhoneMirror` |
 | service | `src/services/phone/phoneNotifications.ts` | `boardroomEscalations`, `PHONE_BOARDROOM_SENT_KEY`, `PHONE_NOTIFY_SENT_KEY`, `PHONE_READY_SENT_KEY`, `phoneNotificationsFor`, `phoneNotifySettings`, `PUSH_STILL_LIMIT`, `readyToCheck`, `sealedNoticeChars`, `startPhoneNotifications`, `withStill` |
+| service | `src/services/phone/phoneOpenRouter.ts` | `openRouterAsk`, `PHONE_OPENROUTER_KEY`, `PhoneHttp` |
 | service | `src/services/phone/phonePreviews.ts` | `ensurePreview`, `FILE_GONE`, `makeStill`, `NOT_READY`, `PREVIEW_PIECE_BYTES`, `PreviewInfo`, `PreviewResult`, `readPiece` |
 | service | `src/services/phone/phoneProtocol.ts` | `decodeMessage`, `decodeMessageWith`, `encodeMessage`, `encodeMessageWith`, `MirroredStore`, `openPairingRequest`, `openPairingRequestWith`, `PairingInfo`, `pairingPayload`, `PairingRequest`, `PHONE_MAX_FRAME_BYTES`, `PHONE_PROTOCOL_VERSION`, `PhoneCallName`, `PhoneKeys`, `PhoneMessage`, `PhoneNotification`, `readPairingPayload`, `relayHttpBase`, `sealPairingRequest` |
-| service | `src/services/phone/remoteData.ts` | `ChatData`, `ChatMessage`, `createRemoteData`, `MoreData`, `offlineLine`, `PhonePreviewParts`, `PhoneTransport`, `reasonOf`, `StudioData` |
+| service | `src/services/phone/phoneRoute.ts` | `NEEDS_COMPUTER`, `phoneRoute`, `PhoneRoute` |
+| service | `src/services/phone/remoteData.ts` | `ChatData`, `ChatMessage`, `createRemoteData`, `MoreData`, `offlineLine`, `PhoneAnswerParts`, `PhonePreviewParts`, `PhoneTransport`, `reasonOf`, `StudioData` |
 | service | `src/services/pluginRegistryService.ts` | `appendPluginAuditEntry`, `discoverDiskPluginManifests`, `executePluginToolRun`, `listPluginAudit`, `listPlugins`, `PLUGIN_AUDIT_SCOPE`, `PLUGIN_MANIFEST_FIELDS`, `PluginAuditEntry`, `PluginAuditInput`, `PluginEntry`, `PLUGINS_SCOPE`, `togglePlugin`, `validatePluginManifestDisk`, `verifyPluginSignatureFromRegistry` |
 | service | `src/services/pluginSandboxService.ts` | `evaluatePluginExecutionPolicy`, `getPluginSandboxPolicy`, `updatePluginSandboxPolicy` |
 | service | `src/services/pluginSigningService.ts` | `_resetTrustedSignerKeysForTesting`, `addTrustedSignerKey`, `exportPublicKeyJwk`, `getOrCreateSignerKeys`, `getTrustedSignerKeys`, `hydrateTrustedSignerKeysFromKv`, `removeTrustedSignerKey`, `signPluginManifest`, `verifyAndAddPlugin`, `verifyPluginSignature` |

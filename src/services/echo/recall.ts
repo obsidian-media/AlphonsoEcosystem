@@ -63,16 +63,25 @@ function score(d: Decision, query: Set<string>): number {
   return total;
 }
 
-/** The decisions that match a question or a step, best first. */
-export async function searchDecisions(query: string, opts: { limit?: number; status?: 'active' | 'all' } = {}): Promise<Decision[]> {
-  const limit = opts.limit ?? ECHO_LIMITS.recallMax;
-  const pool = listDecisions({ status: opts.status === 'all' ? 'all' : 'active' });
+function byWords(pool: Decision[], query: string): Decision[] {
   const words = stems(query);
-  const found = pool
+  return pool
     .map((d) => ({ d, s: score(d, words) }))
     .filter((x) => x.s > 0)
     .sort((a, b) => b.s - a.s || b.d.atMs - a.d.atMs)
     .map((x) => x.d);
+}
+
+/** The active decisions in a given list that match a question, best first (phone phase 4: the phone's mirrored 50). */
+export function rankDecisions(pool: Decision[], query: string, limit: number): Decision[] {
+  return byWords(pool.filter((d) => d.status === 'active'), query).slice(0, limit);
+}
+
+/** The decisions that match a question or a step, best first. */
+export async function searchDecisions(query: string, opts: { limit?: number; status?: 'active' | 'all' } = {}): Promise<Decision[]> {
+  const limit = opts.limit ?? ECHO_LIMITS.recallMax;
+  const pool = listDecisions({ status: opts.status === 'all' ? 'all' : 'active' });
+  const found = byWords(pool, query);
   // Matches by meaning (agent roles Part C2), when the small embedding model is ready.
   if (meaningEnabled()) {
     void ensureMeaning();
@@ -132,6 +141,14 @@ export function decisionLine(d: Decision): string {
 /** For a direct answer (Chat, channels): "Decisions you saved:" with what matters, or ''. */
 export async function answerDecisionsBlock(text: string): Promise<string> {
   const lines = decisionsText(await decisionsFor(text, { agent: 'alphonso', actionType: 'assistant_answer' }));
+  return lines ? `Decisions you saved:\n${lines}` : '';
+}
+
+/** answerDecisionsBlock over a given list, with no store, meaning search or ChromaDB (phone phase 4). */
+export function decisionsBlockFrom(pool: Decision[], text: string): string {
+  const prefs = pool.filter((d) => d.status === 'active' && d.kind === 'preference' && applies(d, 'alphonso', 'assistant_answer'));
+  const matches = rankDecisions(pool, text, ECHO_LIMITS.perStep).filter((d) => d.kind !== 'preference');
+  const lines = decisionsText([...prefs, ...matches]);
   return lines ? `Decisions you saved:\n${lines}` : '';
 }
 

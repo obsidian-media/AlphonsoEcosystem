@@ -11,6 +11,7 @@ import type { CalendarItem } from '../contentFactory/calendarView';
 import type { BoardroomMirror, MemoryMirror, ProjectMirror } from './phase3Mirror';
 import type { PhoneConnector, PhoneSettings, PhoneSkills, PhoneTeam } from './phase3bMirror';
 import { fetchPreview, type PreviewStore } from '../../mobile/previewFetch';
+import { answerOnPhone, type Ask, type PhoneEngine } from './phoneAnswer';
 
 export interface PhoneTransport {
   call(name: PhoneCallName, args: unknown): Promise<{ ok: boolean; value?: unknown; error?: string }>;
@@ -20,16 +21,31 @@ export interface PhoneTransport {
   offlineSince(): number | null;
 }
 
-export interface ChatMessage { id: string; role: 'user' | 'assistant'; text: string; atMs: number; queued?: boolean }
+/** `answeredBy`: answered on the phone (phase 4); `note`: why a waiting message is still waiting. */
+export interface ChatMessage { id: string; role: 'user' | 'assistant'; text: string; atMs: number; queued?: boolean; answeredBy?: PhoneEngine; note?: string }
 export interface ChatData {
   messages(): ChatMessage[];
   send(text: string): Promise<void>;
   subscribe(listener: () => void): () => void;
   readOnly: boolean;
+  /** Phase 4: answer a waiting message on the phone with the engine the user picked. */
+  answerHere(messageId: string, engine: PhoneEngine): Promise<void>;
+  /** The message being answered on the phone, or null. */
+  answering(): string | null;
 }
+
+/** The phone's own models (phase 4): each gives a way to ask, or null when it can't be used now. */
+export interface PhoneAnswerParts { asks: Partial<Record<PhoneEngine, () => Promise<Ask | null>>> }
+
+const ENGINE_UNAVAILABLE: Record<PhoneEngine, string> = {
+  phone: "Apple's model isn't available on this phone.",
+  openrouter: 'Add a free OpenRouter key in More → On this phone first.',
+};
 
 const MIRROR_KEY = 'alphonso_phone_mirror_v1';
 const QUEUE_KEY = 'alphonso_phone_outbox_v1';
+const LOCAL_ANSWERS_KEY = 'alphonso_phone_local_answers_v1';
+type LocalAnswer = { messageId: string; question: string; answer: string; answeredBy: PhoneEngine; atMs: number; copied: boolean };
 
 export function offlineLine(sinceMs: number | null): string {
   if (!sinceMs) return 'Your computer is offline.';
@@ -91,14 +107,21 @@ function load<T>(key: string, fallback: T): T {
 }
 
 /** `memoryOnly` (the demo, phone phase 3 part C): nothing is read from or written to the phone's storage. */
-export function createRemoteData(transport: PhoneTransport, parts: PhonePreviewParts = {}, options: { memoryOnly?: boolean } = {}) {
+export function createRemoteData(transport: PhoneTransport, parts: PhonePreviewParts = {}, options: { memoryOnly?: boolean } = {}, answer: PhoneAnswerParts = { asks: {} }) {
   const memoryOnly = options.memoryOnly === true;
   let mirror: Mirror = { ...EMPTY, ...(memoryOnly ? {} : load<Partial<Mirror>>(MIRROR_KEY, {})) };
   const versions = new Map<MirroredStore, number | null>();
-  let outbox: Array<{ messageId: string; text: string; atMs: number }> = memoryOnly ? [] : load(QUEUE_KEY, []);
+  let outbox: Array<{ messageId: string; text: string; atMs: number; note?: string }> = memoryOnly ? [] : load(QUEUE_KEY, []);
+  let localAnswers: LocalAnswer[] = memoryOnly ? [] : load(LOCAL_ANSWERS_KEY, []);
+  let answeringId: string | null = null;
   const sending = new Set<string>();
   const listeners = new Set<() => void>();
+  const inMirrorChat = (id: string) => (mirror.chat || []).some((m) => m.id === id);
+  const saveLocalAnswers = () => { if (memoryOnly) return; try { localStorage.setItem(LOCAL_ANSWERS_KEY, JSON.stringify(localAnswers)); } catch { /* kept in memory */ } };
   const changed = () => {
+    // A phone answer the computer now holds is shown from its copy.
+    const kept = localAnswers.filter((a) => !(a.copied && inMirrorChat(a.messageId)));
+    if (kept.length !== localAnswers.length) { localAnswers = kept; saveLocalAnswers(); }
     if (!memoryOnly) { try { localStorage.setItem(MIRROR_KEY, JSON.stringify(mirror)); } catch { /* full: the screen still has it */ } }
     for (const l of listeners) l();
   };
@@ -126,6 +149,16 @@ export function createRemoteData(transport: PhoneTransport, parts: PhonePreviewP
     changed();
   }
 
+  // Phase 4: what the phone answered while the computer was off joins its conversation, once.
+  async function copyPhoneAnswers() {
+    for (const a of localAnswers.filter((x) => !x.copied)) {
+      if (!transport.online()) return;
+      const result = await transport.call('chat.phoneAnswered', { messageId: a.messageId, question: a.question, answer: a.answer, answeredBy: a.answeredBy, atMs: a.atMs });
+      if (result.ok) { a.copied = true; saveLocalAnswers(); }
+    }
+    changed();
+  }
+
   async function reconnected() {
     // A fresh snapshot replaces everything the phone had: never merged with stale data.
     const result = await transport.call('mirror.snapshot', {});
@@ -134,6 +167,7 @@ export function createRemoteData(transport: PhoneTransport, parts: PhonePreviewP
       versions.clear();
       changed();
     }
+    await copyPhoneAnswers();
     await flushOutbox();
   }
   transport.onStatus((online) => { if (online) void reconnected(); else changed(); });
@@ -163,11 +197,48 @@ export function createRemoteData(transport: PhoneTransport, parts: PhonePreviewP
     local: false,
   };
 
+  const putBack = (item: { messageId: string; text: string; atMs: number }, note: string) => {
+    outbox = [...outbox, { ...item, note }].sort((a, b) => a.atMs - b.atMs);
+    saveOutbox();
+  };
+
   const chat: ChatData = {
     messages: () => [
       ...mirror.chat,
-      ...outbox.map((o) => ({ id: o.messageId, role: 'user' as const, text: o.text, atMs: o.atMs, queued: true })),
+      ...localAnswers.filter((a) => !inMirrorChat(a.messageId)).flatMap((a): ChatMessage[] => [
+        { id: a.messageId, role: 'user', text: a.question, atMs: a.atMs },
+        { id: `${a.messageId}-a`, role: 'assistant', text: a.answer, atMs: a.atMs, answeredBy: a.answeredBy },
+      ]),
+      ...outbox.map((o) => ({ id: o.messageId, role: 'user' as const, text: o.text, atMs: o.atMs, queued: true, ...(o.note ? { note: o.note } : {}) })),
     ],
+    answering: () => answeringId,
+    answerHere: async (messageId, engine) => {
+      const item = outbox.find((o) => o.messageId === messageId);
+      if (answeringId || !item) return;
+      answeringId = messageId;
+      // Out of the outbox first, so a computer coming back meanwhile doesn't also get it.
+      outbox = outbox.filter((o) => o.messageId !== messageId);
+      saveOutbox();
+      changed();
+      try {
+        const history = chat.messages().filter((m) => !m.queued).map((m) => ({ role: m.role, text: m.text }));
+        const ask = await (answer.asks[engine]?.() ?? Promise.resolve(null)).catch(() => null);
+        if (!ask) { putBack(item, ENGINE_UNAVAILABLE[engine]); return; }
+        const result = await answerOnPhone({ text: item.text, history, decisions: mirror.memory?.decisions || [], ask });
+        if (result.kind === 'answer') {
+          localAnswers = [...localAnswers, { messageId, question: item.text, answer: result.text, answeredBy: engine, atMs: item.atMs, copied: false }];
+          saveLocalAnswers();
+        } else {
+          putBack(item, result.reason);
+        }
+      } finally {
+        answeringId = null;
+        changed();
+      }
+      // The computer may have come back while the phone was answering: copy the answer, or send
+      // a message that went back to waiting, now rather than at the next reconnect.
+      if (transport.online()) { await copyPhoneAnswers(); await flushOutbox(); }
+    },
     send: async (text) => {
       const clean = text.trim();
       if (!clean) return;
