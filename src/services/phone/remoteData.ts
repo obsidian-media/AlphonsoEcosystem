@@ -235,7 +235,9 @@ export function createRemoteData(transport: PhoneTransport, parts: PhonePreviewP
         answeringId = null;
         changed();
       }
-      if (transport.online()) await copyPhoneAnswers();
+      // The computer may have come back while the phone was answering: copy the answer, or send
+      // a message that went back to waiting, now rather than at the next reconnect.
+      if (transport.online()) { await copyPhoneAnswers(); await flushOutbox(); }
     },
     send: async (text) => {
       const clean = text.trim();

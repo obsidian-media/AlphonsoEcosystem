@@ -274,6 +274,21 @@ describe('remoteData: answering on the phone (phase 4)', () => {
     expect(t.calls.filter((c) => c.name === 'chat.phoneAnswered')).toHaveLength(1);
   });
 
+  it('sends a message back to the computer at once when it came back while the phone was deciding', async () => {
+    let release: (v: string) => void = () => {};
+    const { t, data, id } = await offlineWithQueued(() => new Promise((r) => { release = r; }), 'thanks, that was really helpful');
+    const answering = data.chat.answerHere(id, 'phone');
+    await flush();
+    t.snapshots.push({ requests: [], stepOutputs: {}, chat: [], computer: {} });
+    t.goOnline();
+    await flush(); await flush();
+    release('{"route":"plan"}');
+    await answering;
+    await flush();
+    expect(t.calls.filter((c) => c.name === 'chat.send').map((c) => c.args.messageId)).toEqual([id]);
+    expect(data.chat.messages().some((m) => m.queued)).toBe(false);
+  });
+
   it('never keeps or sends a key, and ignores a second tap while answering', async () => {
     let release: (v: string) => void = () => {};
     const { t, data, id } = await offlineWithQueued((system) => (system ? new Promise((r) => { release = r; }) : Promise.resolve('{"route":"direct"}')));
