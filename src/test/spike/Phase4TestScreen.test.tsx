@@ -45,6 +45,27 @@ describe('Phase4TestScreen', () => {
     expect(phone[0].network).toBe('wifi');
   });
 
+  it('a question with no answer by the time limit is recorded as timed out, and the screen says what it is waiting for', async () => {
+    const answer = vi.fn(async () => ({ text: 'Fine.', ms: 50 }));
+    answer.mockImplementationOnce(() => new Promise(() => {}));
+    render(<Phase4TestScreen {...props({ phoneModel: { status: vi.fn(async () => ({ available: true, reason: null })), answer } })} questionTimeoutMs={50} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Run on this phone' }));
+    expect(await screen.findByText(/Asking Apple's model: question 1 of 20/)).toBeTruthy();
+    await waitFor(() => expect(JSON.parse(results()).phone).toHaveLength(PHASE4_QUESTIONS.length));
+    const phone = JSON.parse(results()).phone;
+    expect(phone[0].error).toBe('No answer after 0 seconds (timed out).');
+    expect(phone[1].text).toBe('Fine.');
+  });
+
+  it("Quick check asks Apple's model one tiny question and shows what came back and how long it took", async () => {
+    const answer = vi.fn(async () => ({ text: 'OK', ms: 1234 }));
+    render(<Phase4TestScreen {...props({ phoneModel: { status: vi.fn(async () => ({ available: true, reason: null })), answer } })} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Quick check' }));
+    expect(await screen.findByText('Quick check: "OK" in 1.2 s')).toBeTruthy();
+    expect(answer).toHaveBeenCalledWith('', 'Reply with the word OK.');
+    expect(JSON.parse(results()).quickCheck).toEqual({ text: 'OK', ms: 1234, error: null });
+  });
+
   it('keys are saved through secrets and never appear in the results box', async () => {
     const p = props();
     render(<Phase4TestScreen {...p} />);

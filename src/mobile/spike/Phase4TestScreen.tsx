@@ -13,7 +13,11 @@ export interface Phase4TestProps {
   networkKind: () => Promise<'wifi' | 'cellular' | 'none'>;
   secrets: PhoneSecrets;
   http: { fetch: HttpCall; native: HttpCall };
+  /** How long one question may take on Apple's model before it counts as timed out. */
+  questionTimeoutMs?: number;
 }
+
+const QUESTION_TIMEOUT_MS = 120000;
 
 const PROVIDERS: Array<{ id: CloudProvider; label: string }> = [
   { id: 'openrouter', label: 'OpenRouter key' },
@@ -30,7 +34,7 @@ const WHY_NOT: Record<string, string> = {
 
 const keySlot = (p: CloudProvider) => `spike_${p}_key`;
 
-export function Phase4TestScreen({ phoneModel, networkKind, secrets, http }: Phase4TestProps) {
+export function Phase4TestScreen({ phoneModel, networkKind, secrets, http, questionTimeoutMs = QUESTION_TIMEOUT_MS }: Phase4TestProps) {
   const [status, setStatus] = useState<{ available: boolean; reason: string | null } | null>(null);
   const [keys, setKeys] = useState<Record<CloudProvider, string>>({ openrouter: '', nvidia: '', gemini: '' });
   const [phone, setPhone] = useState<SpikeAnswer[]>([]);
@@ -39,6 +43,15 @@ export function Phase4TestScreen({ phoneModel, networkKind, secrets, http }: Pha
   const [cloudNotes, setCloudNotes] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [copyNote, setCopyNote] = useState<string | null>(null);
+  const [asking, setAsking] = useState<{ n: number; sinceMs: number } | null>(null);
+  const [, setTick] = useState(0);
+  const [quickCheck, setQuickCheck] = useState<{ text: string | null; ms: number; error: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!asking) return undefined;
+    const timer = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, [asking]);
 
   useEffect(() => {
     void phoneModel.status().then(setStatus);
@@ -49,18 +62,47 @@ export function Phase4TestScreen({ phoneModel, networkKind, secrets, http }: Pha
   const runPhone = async () => {
     setBusy('phone');
     const out: SpikeAnswer[] = [];
-    for (const q of PHASE4_QUESTIONS) {
+    for (const [i, q] of PHASE4_QUESTIONS.entries()) {
       const network = await networkKind();
       const started = Date.now();
+      setAsking({ n: i + 1, sinceMs: started });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timedOut = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`No answer after ${Math.round(questionTimeoutMs / 1000)} seconds (timed out).`)), questionTimeoutMs);
+      });
       try {
-        const r = await phoneModel.answer(q.system, q.prompt);
+        const r = await Promise.race([phoneModel.answer(q.system, q.prompt), timedOut]);
         out.push({ questionId: q.id, engine: 'phone', model: 'apple-on-device', text: redactKeys(r.text), ms: r.ms, error: null, network });
       } catch (e) {
         out.push({ questionId: q.id, engine: 'phone', model: 'apple-on-device', text: null, ms: Date.now() - started, error: redactKeys(String((e as Error)?.message || e)), network });
+      } finally {
+        clearTimeout(timer);
       }
       setPhone([...out]);
     }
+    setAsking(null);
     setBusy(null);
+  };
+
+  // One tiny question, to tell "never answers" apart from "can't handle the test's questions".
+  const runQuickCheck = async () => {
+    setBusy('quick');
+    const started = Date.now();
+    setAsking({ n: 0, sinceMs: started });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const r = await Promise.race([
+        phoneModel.answer('', 'Reply with the word OK.'),
+        new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`No answer after ${Math.round(questionTimeoutMs / 1000)} seconds (timed out).`)), questionTimeoutMs); }),
+      ]);
+      setQuickCheck({ text: redactKeys(r.text), ms: r.ms, error: null });
+    } catch (e) {
+      setQuickCheck({ text: null, ms: Date.now() - started, error: redactKeys(String((e as Error)?.message || e)) });
+    } finally {
+      clearTimeout(timer);
+      setAsking(null);
+      setBusy(null);
+    }
   };
 
   const runCloud = async () => {
@@ -98,6 +140,7 @@ export function Phase4TestScreen({ phoneModel, networkKind, secrets, http }: Pha
   const results = JSON.stringify({
     device: { userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '' },
     appleModel: status,
+    quickCheck,
     phone,
     cloud,
     cloudNotes,
@@ -121,6 +164,9 @@ export function Phase4TestScreen({ phoneModel, networkKind, secrets, http }: Pha
       <h1 className="text-lg font-semibold">Phase 4 test</h1>
       <p>{status === null ? "Checking Apple's model…" : status.available ? "Apple's model is ready on this iPhone." : WHY_NOT[status.reason || ''] || "Apple's model isn't available here."}</p>
       <button type="button" disabled={!status?.available || !!busy} onClick={runPhone} className="min-h-11 w-full rounded-xl bg-(--accent) px-4 text-white disabled:opacity-50">Run on this phone</button>
+      <button type="button" disabled={!status?.available || !!busy} onClick={runQuickCheck} className="min-h-11 w-full rounded-xl bg-(--surface-3) px-4 disabled:opacity-50">Quick check</button>
+      {asking && <p role="status">{asking.n === 0 ? 'Quick check: waiting' : `Asking Apple's model: question ${asking.n} of ${PHASE4_QUESTIONS.length}`} ({Math.round((Date.now() - asking.sinceMs) / 1000)} s)</p>}
+      {quickCheck && <p>{quickCheck.error ? `Quick check: ${quickCheck.error}` : `Quick check: "${quickCheck.text}" in ${(quickCheck.ms / 1000).toFixed(1)} s`}</p>}
       {phone.length > 0 && <p>On this phone: {done(phone)}</p>}
 
       {PROVIDERS.map((p) => (
