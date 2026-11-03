@@ -47,6 +47,7 @@ mod oauth_signin;
 mod ollama;
 mod os_keychain_store;
 mod phone_box;
+mod phone_relay;
 mod phone_signin;
 mod plugin_runtime;
 mod policy_gate;
@@ -818,6 +819,10 @@ pub fn run() {
       phone_box::phone_seal,
       phone_box::phone_open,
       phone_box::phone_open_anonymous,
+      phone_relay::phone_relay_open,
+      phone_relay::phone_relay_send,
+      phone_relay::phone_relay_close,
+      phone_relay::phone_relay_unpair,
       oauth_signin::oauth_finish_pasted,
       oauth_signin::instagram_refresh_token,
       comfyui_video_models::comfyui_video_models,
