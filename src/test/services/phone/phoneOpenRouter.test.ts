@@ -29,7 +29,7 @@ describe('openRouterAsk', () => {
 
   it.each([
     [{ status: 429, data: { error: { message: `limit for ${KEY}` } } }, "OpenRouter's free limit is used up for now. Try again later, or wait for your computer."],
-    [{ status: 401, data: { error: { message: `bad key ${KEY}` } } }, 'OpenRouter refused the key. Check it in Settings → On this phone.'],
+    [{ status: 401, data: { error: { message: `bad key ${KEY}` } } }, 'OpenRouter refused the key. Check it in More → On this phone.'],
     [new TypeError(`Load failed ${KEY}`), "OpenRouter couldn't be reached."],
     [{ status: 500, data: { error: { message: `oops ${KEY}` } } }, 'OpenRouter answered with an error (500).'],
   ])('says plainly why it failed, never with the key', async (reply, message) => {

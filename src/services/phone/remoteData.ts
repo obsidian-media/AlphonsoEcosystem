@@ -39,7 +39,7 @@ export interface PhoneAnswerParts { asks: Partial<Record<PhoneEngine, () => Prom
 
 const ENGINE_UNAVAILABLE: Record<PhoneEngine, string> = {
   phone: "Apple's model isn't available on this phone.",
-  openrouter: 'Add a free OpenRouter key in Settings → On this phone first.',
+  openrouter: 'Add a free OpenRouter key in More → On this phone first.',
 };
 
 const MIRROR_KEY = 'alphonso_phone_mirror_v1';

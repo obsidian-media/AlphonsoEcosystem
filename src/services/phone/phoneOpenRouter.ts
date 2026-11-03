@@ -24,7 +24,7 @@ export function openRouterAsk(http: PhoneHttp, key: string): Ask {
       throw new Error("OpenRouter couldn't be reached.");
     }
     if (res.status === 429) throw new Error("OpenRouter's free limit is used up for now. Try again later, or wait for your computer.");
-    if (res.status === 401 || res.status === 403) throw new Error('OpenRouter refused the key. Check it in Settings → On this phone.');
+    if (res.status === 401 || res.status === 403) throw new Error('OpenRouter refused the key. Check it in More → On this phone.');
     if (res.status < 200 || res.status >= 300) throw new Error(`OpenRouter answered with an error (${res.status}).`);
     const data = (typeof res.data === 'string' ? safeJson(res.data) : res.data) as { choices?: Array<{ message?: { content?: unknown } }> } | null;
     return String(data?.choices?.[0]?.message?.content ?? '');
